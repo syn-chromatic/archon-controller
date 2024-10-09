@@ -2,8 +2,11 @@ use crate::configuration::BUFFER;
 
 #[repr(u16)]
 pub enum InputType {
-    DPad = 0,
-    JoyStick = 1,
+    // 1-bytes — [0x00] UP | [0x01] RIGHT | [0x02] DOWN | [0x03] LEFT
+    DPad(InputDPad) = 0,
+    // 4-bytes — [2-byte XAXIS, 2-byte YAXIS]
+    JoyStick(InputJoyStick) = 1,
+    // 1-bytes — [ASCII]
     ASCII(InputASCII) = 2,
 }
 
@@ -14,12 +17,29 @@ impl InputType {
         let value: u16 = u16::from_be_bytes(bytes);
 
         match value {
-            0 => InputType::DPad,
-            1 => InputType::JoyStick,
+            0 => unimplemented!("InputType Unimplemented"),
+            1 => unimplemented!("InputType Unimplemented"),
             2 => InputType::ASCII(InputASCII::from_buffer(buffer)),
             _ => panic!("Unsupported InputType: {}", { value }),
         }
     }
+}
+
+#[repr(u8)]
+pub enum DPad {
+    Up = 0,
+    Right = 1,
+    Down = 2,
+    Left = 3,
+}
+
+pub struct InputDPad {
+    dpad: DPad,
+}
+
+pub struct InputJoyStick {
+    x: u16,
+    y: u16,
 }
 
 pub struct InputASCII {

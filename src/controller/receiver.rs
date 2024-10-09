@@ -185,8 +185,8 @@ impl ArchonReceiver {
                     let input_type: InputType = InputType::from_buffer(&self.tcp_buffer);
 
                     match input_type {
-                        InputType::DPad => todo!(),
-                        InputType::JoyStick => todo!(),
+                        InputType::DPad(_) => todo!(),
+                        InputType::JoyStick(_) => todo!(),
                         InputType::ASCII(input_ascii) => {
                             defmt::info!(
                                 "ASCII: {:?}, TCPBuffer: {:?} | TCPResult: {}",
