@@ -186,11 +186,24 @@ impl ArchonReceiver {
 
                     match input_type {
                         InputType::DPad(_) => todo!(),
-                        InputType::JoyStick(_) => todo!(),
-                        InputType::ASCII(input_ascii) => {
+                        InputType::JoyStick(joystick) => {
+                            let id = joystick.id();
+                            let xy = joystick.xy();
                             defmt::info!(
-                                "ASCII: {:?}, TCPBuffer: {:?} | TCPResult: {}",
-                                input_ascii.char(),
+                                "ID: {:?} | XY: {:?} | TCPBuffer: {:?} | TCPResult: {}",
+                                id,
+                                xy,
+                                self.tcp_buffer,
+                                tcp_result
+                            );
+                        }
+                        InputType::ASCII(input_ascii) => {
+                            let id = input_ascii.id();
+                            let c = input_ascii.char();
+                            defmt::info!(
+                                "ID: {:?} | ASCII: {:?} | TCPBuffer: {:?} | TCPResult: {}",
+                                id,
+                                c,
                                 self.tcp_buffer,
                                 tcp_result
                             );

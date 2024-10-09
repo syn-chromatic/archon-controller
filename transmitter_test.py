@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from io import BufferedReader
 
 
-class ControllerData(ABC):
+class InputType(ABC):
     def __init__(self):
         pass
 
@@ -13,15 +13,31 @@ class ControllerData(ABC):
         pass
 
 
-class ASCIIData(ControllerData):
-    def __init__(self, ascii: str):
+class InputASCII(InputType):
+    def __init__(self, id: int, ascii: str):
+        self.id: int = id
         self.type: int = 0x02
         self.ascii: str = ascii
 
     def get_bytes(self) -> bytearray:
+        id_bytes = self.id.to_bytes(1, "big")
         type_bytes = self.type.to_bytes(2, "big")
         ascii_bytes = self.ascii.encode("ascii")
-        return bytearray(type_bytes + ascii_bytes)
+        return bytearray(id_bytes + type_bytes + ascii_bytes)
+
+
+class InputJoyStick(InputType):
+    def __init__(self, id: int, x: int, y: int):
+        self.id: int = id
+        self.type: int = 0x01
+        self.xy: tuple[int, int] = (x, y)
+
+    def get_bytes(self) -> bytearray:
+        id_bytes = self.id.to_bytes(1, "big")
+        type_bytes = self.type.to_bytes(2, "big")
+        x_bytes = self.xy[0].to_bytes(2, "big")
+        y_bytes = self.xy[1].to_bytes(2, "big")
+        return bytearray(id_bytes + type_bytes + x_bytes + y_bytes)
 
 
 class ArchonTransmitter:
@@ -46,7 +62,7 @@ class ArchonTransmitter:
             self.sender.connect((self.ip, self.port))
             self.connected = True
 
-    def send(self, data: ControllerData):
+    def send(self, data: InputType):
         self.connect()
         data_bytes = data.get_bytes()
 
@@ -69,6 +85,12 @@ archon = ArchonTransmitter(length, receiver_ip, receiver_port)
 
 while True:
     data = input("Input: ")
-    data = data[:1]
-    data = ASCIIData(data)
+    x, y = data.split(",")
+    x = int(x)
+    y = int(y)
+    data = InputJoyStick(0, x, y)
     archon.send(data)
+
+    # data = data[:1]
+    # data = InputASCII(0, data)
+    # archon.send(data)

@@ -34,7 +34,7 @@
         },
         {
             "type": "shell",
-            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/debug/albatross-mk1",
+            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/debug/archon-controller",
             "label": "rust: attach debug",
             "group": {
                 "kind": "test",

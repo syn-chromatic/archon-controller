@@ -1,7 +1,7 @@
 use crate::configuration::BUFFER;
 
 // DATA REPRESENTATION
-// [2-byte Type ID, 1-byte Distinction ID, X-byte Input Data]
+// [1-byte ID, 2-byte Type ID, X-byte Input Data]
 
 #[repr(u16)]
 pub enum InputType {
@@ -17,7 +17,7 @@ pub enum InputType {
 
 impl InputType {
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> InputType {
-        let bytes: &[u8] = &buffer[0..=1];
+        let bytes: &[u8] = &buffer[1..=2];
         let bytes: [u8; 2] = bytes.try_into().unwrap();
         let type_id: u16 = u16::from_be_bytes(bytes);
 
@@ -46,7 +46,7 @@ pub struct InputDPad {
 
 impl InputDPad {
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
-        let id: u8 = *&buffer[2];
+        let id: u8 = *&buffer[0];
         let value: &u8 = &buffer[3];
 
         let dpad: DPad = match value {
@@ -76,7 +76,7 @@ pub struct InputJoyStick {
 
 impl InputJoyStick {
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
-        let id: u8 = *&buffer[2];
+        let id: u8 = *&buffer[0];
         let x_bytes: &[u8] = &buffer[3..=4];
         let y_bytes: &[u8] = &buffer[5..=6];
 
@@ -113,7 +113,7 @@ pub struct InputASCII {
 
 impl InputASCII {
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
-        let id: u8 = *&buffer[2];
+        let id: u8 = *&buffer[0];
         let bytes: &u8 = &buffer[3];
         let bytes: u32 = *bytes as u32;
         let char: char = char::from_u32(bytes).unwrap();
@@ -137,7 +137,7 @@ pub struct InputRotary {
 
 impl InputRotary {
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
-        let id: u8 = *&buffer[2];
+        let id: u8 = *&buffer[0];
         let bytes: &[u8] = &buffer[3..=4];
         let bytes: [u8; 2] = bytes.try_into().unwrap();
         let value: u16 = u16::from_be_bytes(bytes);
