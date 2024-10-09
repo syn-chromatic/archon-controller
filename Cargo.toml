@@ -1,0 +1,43 @@
+[package]
+name = "archon-controller"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies.embsys]
+git = "https://github.com/syn-chromatic/embsys-rs.git"
+rev = "fcdc1ea311ca0b237801f2afbd9b74b604fb9a8a"
+package = "embsys"
+features = ["rp2040-probe"]
+
+
+[[bin]]
+name = "archon-controller"
+test = false
+bench = false
+
+
+[profile.dev]
+opt-level = 3
+debug = 2
+debug-assertions = true
+overflow-checks = true
+lto = "thin"
+
+
+[profile.dev-optimized]
+inherits = "dev"
+debug = 2
+debug-assertions = false
+
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+
+
+[profile.release-optimized]
+inherits = "release"
+opt-level = "s"
+debug = false
+strip = true

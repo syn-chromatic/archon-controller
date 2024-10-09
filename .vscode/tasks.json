@@ -1,0 +1,69 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Firmware",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "run",
+                "--profile",
+                "${input:profiles}",
+                "--config",
+                ".cargo/runners/${input:runner}.toml",
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Binary Firmware",
+            "type": "shell",
+            "command": "cargo objcopy --profile ${input:profiles} --bin albatross-mk1 -- -O binary firmware.bin",
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "shell",
+            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/debug/albatross-mk1",
+            "label": "rust: attach debug",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "profiles",
+            "type": "pickString",
+            "description": "Specify Profile",
+            "options": [
+                "dev",
+                "dev-optimized",
+                "release",
+                "release-optimized"
+            ]
+        },
+        {
+            "id": "runner",
+            "type": "pickString",
+            "description": "Specify Runner",
+            "options": [
+                "flash",
+                "flash-and-probe",
+                "uf2",
+            ],
+            "default": "flash-and-probe",
+        }
+    ]
+}

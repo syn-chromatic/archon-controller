@@ -1,0 +1,36 @@
+[build]
+target = "thumbv6m-none-eabi" # Cortex-M0 and Cortex-M0+
+# target = "thumbv7m-none-eabi"               # Cortex-M3
+# target = "thumbv7em-none-eabi"              # Cortex-M4 and Cortex-M7 (no FPU)
+# target = "thumbv7em-none-eabihf"            # Cortex-M4F and Cortex-M7F (with FPU)
+# target = "aarch64-unknown-linux-gnu"        # 64-bit Linux
+# target = "i686-pc-windows-msvc"             # 32-bit Windows
+# target = "x86_64-pc-windows-msvc"           # 64-bit Windows
+
+
+[target.thumbv6m-none-eabi]
+rustflags = [
+    # "--cfg",
+    # "portable_atomic_unsafe_assume_single_core",
+
+    # "-C",
+    # "target-feature=+crt-static",
+
+    # "-C",
+    # "linker=flip-link",
+    "-C",
+    "link-arg=--nmagic",
+    "-C",
+    "link-arg=-Tlink.x",
+    "-C",
+    "link-arg=-Tdefmt.x",
+    # "-C",
+    # "inline-threshold=5",
+    # "-C",
+    # "no-vectorize-loops",
+]
+
+
+[env]
+DEFMT_LOG = "info"
+CHRONO_TZ_TIMEZONE_FILTER = "(Etc/.*|Israel)"
