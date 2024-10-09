@@ -1,6 +1,6 @@
 use crate::configuration::WIFI_PASS;
 use crate::configuration::WIFI_SSID;
-use crate::controller::ArchonReceiver;
+use crate::controller::receiver::ArchonReceiver;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
