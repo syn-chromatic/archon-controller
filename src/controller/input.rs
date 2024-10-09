@@ -25,7 +25,7 @@ impl InputType {
             0 => InputType::DPad(InputDPad::from_buffer(buffer)),
             1 => InputType::JoyStick(InputJoyStick::from_buffer(buffer)),
             2 => InputType::ASCII(InputASCII::from_buffer(buffer)),
-            3 => unimplemented!("Unimplemented InputType"),
+            3 => InputType::Rotary(InputRotary::from_buffer(buffer)),
             _ => panic!("Unsupported InputType: {}", { type_id }),
         }
     }
