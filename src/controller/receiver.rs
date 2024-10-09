@@ -1,3 +1,6 @@
+use super::input::InputASCII;
+use super::input::InputType;
+use crate::configuration::BUFFER;
 use crate::diagnostics::FrameTime;
 
 use embsys::crates::cortex_m;
@@ -40,8 +43,6 @@ use embassy_time::Duration;
 use embassy_time::Instant;
 use embassy_time::TimeoutError;
 use embassy_time::Timer;
-
-const BUFFER: usize = 32;
 
 pub struct ArchonReceiver {
     addr: Option<IpAddress>,
@@ -181,6 +182,21 @@ impl ArchonReceiver {
 
             if let Ok(tcp_result) = tcp_result {
                 if tcp_result > 0 {
+                    let input_type: InputType = InputType::from_buffer(&self.tcp_buffer);
+
+                    match input_type {
+                        InputType::DPad => todo!(),
+                        InputType::JoyStick => todo!(),
+                        InputType::ASCII(input_ascii) => {
+                            defmt::info!(
+                                "ASCII: {:?}, TCPBuffer: {:?} | TCPResult: {}",
+                                input_ascii.char(),
+                                self.tcp_buffer,
+                                tcp_result
+                            );
+                        }
+                    }
+
                     defmt::info!(
                         "TCPBuffer: {:?} | TCPResult: {}",
                         self.tcp_buffer,

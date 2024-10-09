@@ -15,7 +15,7 @@ class ControllerData(ABC):
 
 class ASCIIData(ControllerData):
     def __init__(self, ascii: str):
-        self.type: int = 0x01
+        self.type: int = 0x02
         self.ascii: str = ascii
 
     def get_bytes(self) -> bytearray:
