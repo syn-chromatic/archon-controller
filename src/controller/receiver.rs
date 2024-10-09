@@ -195,6 +195,7 @@ impl ArchonReceiver {
                                 tcp_result
                             );
                         }
+                        InputType::Rotary(_) => todo!(),
                     }
 
                     defmt::info!(
