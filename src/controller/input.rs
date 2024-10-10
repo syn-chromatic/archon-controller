@@ -87,12 +87,12 @@ impl InputDPad {
         Self { id, dpad }
     }
 
-    pub fn to_buffer(&self) -> [u8; 4] {
+    pub fn to_buffer(&self) -> [u8; BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x00];
         let dpad_be: u8 = self.dpad.as_u8();
 
-        let mut buffer: [u8; 4] = [0; 4];
+        let mut buffer: [u8; BUFFER] = [0; BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3] = dpad_be;
@@ -138,13 +138,13 @@ impl InputJoyStick {
         Self { id, x, y }
     }
 
-    pub fn to_buffer(&self) -> [u8; 4] {
+    pub fn to_buffer(&self) -> [u8; BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x01];
         let x_be: [u8; 2] = split_u16(self.x);
         let y_be: [u8; 2] = split_u16(self.y);
 
-        let mut buffer: [u8; 4] = [0; 4];
+        let mut buffer: [u8; BUFFER] = [0; BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3..=4].copy_from_slice(&x_be);
@@ -193,12 +193,12 @@ impl InputASCII {
         Self { id, char }
     }
 
-    pub fn to_buffer(&self) -> [u8; 4] {
+    pub fn to_buffer(&self) -> [u8; BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x02];
         let char_be: u8 = self.char as u8;
 
-        let mut buffer: [u8; 4] = [0; 4];
+        let mut buffer: [u8; BUFFER] = [0; BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3] = char_be;
@@ -238,12 +238,12 @@ impl InputRotary {
         Self { id, value }
     }
 
-    pub fn to_buffer(&self) -> [u8; 4] {
+    pub fn to_buffer(&self) -> [u8; BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x03];
         let value_be: [u8; 2] = split_u16(self.value);
 
-        let mut buffer: [u8; 4] = [0; 4];
+        let mut buffer: [u8; BUFFER] = [0; BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3..=4].copy_from_slice(&value_be);
