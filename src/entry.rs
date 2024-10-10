@@ -1,5 +1,5 @@
-use crate::tasks::connect_wifi;
 use crate::tasks::archon;
+use crate::tasks::connect_wifi;
 
 use embsys::crates::cortex_m_rt;
 use embsys::crates::defmt;
@@ -33,9 +33,13 @@ async fn rp2040_entry(spawner: Spawner) {
     let _ = wifi_task.start();
     wifi_task.wait().await;
 
-    let task = Task::new(send_spawner, archon);
-    let _ = task.start();
-    task.wait().await;
+    loop {
+        defmt::info!("Starting Archon..");
+        let task = Task::new(send_spawner, archon);
+        let _ = task.start();
+        task.wait().await;
+        defmt::info!("Archon Disconnected")
+    }
 
     // defmt::info!("Initializing Watchdog..");
     // let watchdog: &mut Watchdog = HWController::watchdog_mut();

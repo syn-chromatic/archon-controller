@@ -47,7 +47,6 @@ use embassy_time::Timer;
 pub struct ArchonReceiver {
     addr: Option<IpAddress>,
     port: u16,
-    tcp_buffer: [u8; BUFFER],
 }
 
 impl ArchonReceiver {
@@ -106,16 +105,12 @@ impl ArchonReceiver {
         true
     }
 
-    async fn read_data(&mut self, tcp: &mut TcpSocket<'_>) -> Result<usize, TCPError> {
-        let fut = tcp.read(&mut self.tcp_buffer);
-        let result: Result<Result<usize, TCPError>, TimeoutError> =
-            with_timeout(Duration::from_secs(1), fut).await;
+    fn read_input(buffer: &mut [u8]) -> (usize, InputType) {
+        defmt::info!("Len: {} | Buffer: {:?}", buffer.len(), buffer);
+        let input_buffer: [u8; BUFFER] = buffer.try_into().unwrap();
+        let input_type: InputType = InputType::from_buffer(&input_buffer);
 
-        if let Ok(result) = result {
-            return result;
-        }
-
-        Err(TCPError::ConnectionReset)
+        (buffer.len(), input_type)
     }
 
     async fn send_confirmation(&mut self, tcp: &mut TcpSocket<'_>) -> bool {
@@ -157,17 +152,11 @@ impl ArchonReceiver {
 
 impl ArchonReceiver {
     pub fn new(addr: Option<IpAddress>, port: u16) -> Self {
-        let tcp_buffer: [u8; BUFFER] = [0; BUFFER];
-
-        Self {
-            addr,
-            port,
-            tcp_buffer,
-        }
+        Self { addr, port }
     }
 
     pub async fn listen(&mut self) -> Result<(), AcceptError> {
-        let mut frametime = FrameTime::new();
+        let mut frametime: FrameTime = FrameTime::new();
 
         let mut rx_buffer: [u8; BUFFER] = [0; BUFFER];
         let mut tx_buffer: [u8; BUFFER] = [0; BUFFER];
@@ -176,48 +165,33 @@ impl ArchonReceiver {
         self.accept_tcp_connection(&mut tcp).await?;
 
         loop {
-            let instant = Instant::now();
-            self.tcp_buffer.fill(0);
-            let tcp_result = tcp.read(&mut self.tcp_buffer).await;
+            let instant: Instant = Instant::now();
+            let result: Result<InputType, TCPError> = tcp.read_with(Self::read_input).await;
 
-            if let Ok(tcp_result) = tcp_result {
-                if tcp_result > 0 {
-                    let input_type: InputType = InputType::from_buffer(&self.tcp_buffer);
-
-                    match input_type {
-                        InputType::DPad(_) => todo!(),
-                        InputType::JoyStick(joystick) => {
-                            let id = joystick.id();
-                            let xy = joystick.xy();
-                            defmt::info!(
-                                "ID: {:?} | XY: {:?} | TCPBuffer: {:?} | TCPResult: {}",
-                                id,
-                                xy,
-                                self.tcp_buffer,
-                                tcp_result
-                            );
-                        }
-                        InputType::ASCII(input_ascii) => {
-                            let id = input_ascii.id();
-                            let c = input_ascii.char();
-                            defmt::info!(
-                                "ID: {:?} | ASCII: {:?} | TCPBuffer: {:?} | TCPResult: {}",
-                                id,
-                                c,
-                                self.tcp_buffer,
-                                tcp_result
-                            );
-                        }
-                        InputType::Rotary(_) => todo!(),
+            if let Ok(input_type) = result {
+                match input_type {
+                    InputType::DPad(dpad) => {
+                        let id = dpad.id();
+                        let dpad_v = dpad.dpad().as_u8();
+                        defmt::info!("ID: {:?} | DPAD: {:?} ", id, dpad_v,);
                     }
-
-                    defmt::info!(
-                        "TCPBuffer: {:?} | TCPResult: {}",
-                        self.tcp_buffer,
-                        tcp_result
-                    );
+                    InputType::JoyStick(joystick) => {
+                        let id = joystick.id();
+                        let xy = joystick.xy();
+                        defmt::info!("ID: {:?} | XY: {:?}", id, xy,);
+                    }
+                    InputType::ASCII(input_ascii) => {
+                        let id = input_ascii.id();
+                        let c = input_ascii.char();
+                        defmt::info!("ID: {:?} | ASCII: {:?}", id, c,);
+                    }
+                    InputType::Rotary(rotary) => {
+                        let id = rotary.id();
+                        let rotary_v = rotary.value();
+                        defmt::info!("ID: {:?} | Rotary: {:?} ", id, rotary_v,);
+                    }
                 }
-            } else if let Err(error) = tcp_result {
+            } else if let Err(error) = result {
                 self.defmt_tcp_error(error);
                 break;
             }
