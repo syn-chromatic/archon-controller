@@ -65,6 +65,14 @@ pub struct InputDPad {
 }
 
 impl InputDPad {
+    pub fn new(id: u8, dpad: DPad) -> Self {
+        Self { id, dpad }
+    }
+
+    pub fn as_type(self) -> InputType {
+        InputType::DPad(self)
+    }
+
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let value: &u8 = &buffer[3];
@@ -108,6 +116,14 @@ pub struct InputJoyStick {
 }
 
 impl InputJoyStick {
+    pub fn new(id: u8, x: u16, y: u16) -> Self {
+        Self { id, x, y }
+    }
+
+    pub fn as_type(self) -> InputType {
+        InputType::JoyStick(self)
+    }
+
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let x_bytes: &[u8] = &buffer[3..=4];
@@ -160,6 +176,14 @@ pub struct InputASCII {
 }
 
 impl InputASCII {
+    pub fn new(id: u8, char: char) -> Self {
+        Self { id, char }
+    }
+
+    pub fn as_type(self) -> InputType {
+        InputType::ASCII(self)
+    }
+
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let bytes: &u8 = &buffer[3];
@@ -197,6 +221,14 @@ pub struct InputRotary {
 }
 
 impl InputRotary {
+    pub fn new(id: u8, value: u16) -> Self {
+        Self { id, value }
+    }
+
+    pub fn as_type(self) -> InputType {
+        InputType::Rotary(self)
+    }
+
     pub fn from_buffer(buffer: &[u8; BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let bytes: &[u8] = &buffer[3..=4];
