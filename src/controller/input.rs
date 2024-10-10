@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use crate::configuration::BUFFER;
 
 // DATA REPRESENTATION
@@ -5,13 +8,13 @@ use crate::configuration::BUFFER;
 
 #[repr(u16)]
 pub enum InputType {
-    // 1-byte — [0x00] UP | [0x01] RIGHT | [0x02] DOWN | [0x03] LEFT
+    /// 1-byte — [0x00] UP | [0x01] RIGHT | [0x02] DOWN | [0x03] LEFT
     DPad(InputDPad) = 0,
-    // 4-byte — [2-byte XAXIS, 2-byte YAXIS]
+    /// 4-byte — [2-byte XAXIS, 2-byte YAXIS]
     JoyStick(InputJoyStick) = 1,
-    // 1-byte — [ASCII]
+    /// 1-byte — [1-byte ASCII]
     ASCII(InputASCII) = 2,
-    // 2-byte — [2-byte ADC]
+    /// 2-byte — [2-byte ADC]
     Rotary(InputRotary) = 3,
 }
 
@@ -31,12 +34,29 @@ impl InputType {
     }
 }
 
+fn split_u16(value: u16) -> [u8; 2] {
+    let msb: u8 = (value >> 8) as u8;
+    let lsb: u8 = (value & 0xFF) as u8;
+    [msb, lsb]
+}
+
 #[repr(u8)]
 pub enum DPad {
     Up = 0,
     Right = 1,
     Down = 2,
     Left = 3,
+}
+
+impl DPad {
+    pub fn as_u8(&self) -> u8 {
+        match self {
+            DPad::Up => 0,
+            DPad::Right => 1,
+            DPad::Down => 2,
+            DPad::Left => 3,
+        }
+    }
 }
 
 pub struct InputDPad {
@@ -57,6 +77,19 @@ impl InputDPad {
             _ => panic!("Invalid DPad value: {}", value),
         };
         Self { id, dpad }
+    }
+
+    pub fn to_buffer(&self) -> [u8; 4] {
+        let id_be: u8 = self.id.to_be();
+        let type_be: [u8; 2] = [0x00, 0x00];
+        let dpad_be: u8 = self.dpad.as_u8();
+
+        let mut buffer: [u8; 4] = [0; 4];
+        buffer[0] = id_be;
+        buffer[1..=2].copy_from_slice(&type_be);
+        buffer[3] = dpad_be;
+
+        buffer
     }
 
     pub fn id(&self) -> u8 {
@@ -87,6 +120,21 @@ impl InputJoyStick {
         let y: u16 = u16::from_be_bytes(y_bytes);
 
         Self { id, x, y }
+    }
+
+    pub fn to_buffer(&self) -> [u8; 4] {
+        let id_be: u8 = self.id.to_be();
+        let type_be: [u8; 2] = [0x00, 0x01];
+        let x_be: [u8; 2] = split_u16(self.x);
+        let y_be: [u8; 2] = split_u16(self.y);
+
+        let mut buffer: [u8; 4] = [0; 4];
+        buffer[0] = id_be;
+        buffer[1..=2].copy_from_slice(&type_be);
+        buffer[3..=4].copy_from_slice(&x_be);
+        buffer[5..=6].copy_from_slice(&y_be);
+
+        buffer
     }
 
     pub fn id(&self) -> u8 {
@@ -121,6 +169,19 @@ impl InputASCII {
         Self { id, char }
     }
 
+    pub fn to_buffer(&self) -> [u8; 4] {
+        let id_be: u8 = self.id.to_be();
+        let type_be: [u8; 2] = [0x00, 0x02];
+        let char_be: u8 = self.char as u8;
+
+        let mut buffer: [u8; 4] = [0; 4];
+        buffer[0] = id_be;
+        buffer[1..=2].copy_from_slice(&type_be);
+        buffer[3] = char_be;
+
+        buffer
+    }
+
     pub fn id(&self) -> u8 {
         self.id
     }
@@ -143,6 +204,19 @@ impl InputRotary {
         let value: u16 = u16::from_be_bytes(bytes);
 
         Self { id, value }
+    }
+
+    pub fn to_buffer(&self) -> [u8; 4] {
+        let id_be: u8 = self.id.to_be();
+        let type_be: [u8; 2] = [0x00, 0x03];
+        let value_be: [u8; 2] = split_u16(self.value);
+
+        let mut buffer: [u8; 4] = [0; 4];
+        buffer[0] = id_be;
+        buffer[1..=2].copy_from_slice(&type_be);
+        buffer[3..=4].copy_from_slice(&value_be);
+
+        buffer
     }
 
     pub fn id(&self) -> u8 {
