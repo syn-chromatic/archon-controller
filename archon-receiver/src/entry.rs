@@ -1,6 +1,6 @@
 use crate::consts::INPUT_BUFFER;
 use crate::receiver::ArchonReceiver;
-use crate::statics::ARCHON_RECEIVER;
+use crate::statics::RECEIVER;
 use crate::tasks::archon_init;
 use crate::tasks::archon_listen;
 use crate::tasks::wifi_connect;
@@ -44,7 +44,7 @@ async fn rp2040_entry(spawner: Spawner) {
     let archon_listen_task: Task = Task::new(send_spawner, archon_listen);
     let _ = archon_listen_task.start();
 
-    let archon: &mut ArchonReceiver<INPUT_BUFFER> = unsafe { ARCHON_RECEIVER.get_mut() };
+    let archon: &mut ArchonReceiver<INPUT_BUFFER> = unsafe { RECEIVER.get_mut() };
 
     loop {
         embassy_futures::yield_now().await;

@@ -1,7 +1,7 @@
 use crate::consts::INPUT_BUFFER;
 use crate::consts::WIFI_PASS;
 use crate::consts::WIFI_SSID;
-use crate::statics::ARCHON_RECEIVER;
+use crate::statics::RECEIVER;
 
 use crate::receiver::ArchonReceiver;
 
@@ -24,12 +24,12 @@ pub async fn archon_init(_s: TaskState) {
     let endpoint: ArchonEndpoint = ArchonEndpoint::new(None, 9688);
     archon.set_endpoint(endpoint);
 
-    unsafe { ARCHON_RECEIVER.init(archon) };
+    unsafe { RECEIVER.init(archon) };
 }
 
 #[embassy_executor::task]
 pub async fn archon_listen(_s: TaskState) {
-    let archon: &mut ArchonReceiver<INPUT_BUFFER> = unsafe { ARCHON_RECEIVER.get_mut() };
+    let archon: &mut ArchonReceiver<INPUT_BUFFER> = unsafe { RECEIVER.get_mut() };
     let _ = archon.listen().await;
 }
 
