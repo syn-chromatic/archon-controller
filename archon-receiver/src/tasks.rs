@@ -10,10 +10,7 @@ use archon_core::endpoint::ArchonEndpoint;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_time;
 use embsys::drivers;
-use embsys::exts::std;
 use embsys::helpers;
-
-use std::boxed::Box;
 
 use helpers::task_handler::TaskState;
 use helpers::wpa_psk::WpaPsk;
@@ -32,7 +29,7 @@ pub async fn archon_init(_s: TaskState) {
 
 #[embassy_executor::task]
 pub async fn archon_listen(_s: TaskState) {
-    let archon: &mut Box<ArchonReceiver<32>> = unsafe { ARCHON_RECEIVER.get_mut() };
+    let archon: &mut ArchonReceiver<INPUT_BUFFER> = unsafe { ARCHON_RECEIVER.get_mut() };
     let _ = archon.listen().await;
 }
 

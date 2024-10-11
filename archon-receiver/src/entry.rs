@@ -1,3 +1,4 @@
+use crate::consts::INPUT_BUFFER;
 use crate::receiver::ArchonReceiver;
 use crate::statics::ARCHON_RECEIVER;
 use crate::tasks::archon_init;
@@ -11,7 +12,6 @@ use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
 use embsys::crates::embassy_time;
-use embsys::exts::std;
 use embsys::helpers;
 use embsys::setup::SysInit;
 
@@ -19,7 +19,6 @@ use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
 
 use helpers::task_handler::Task;
-use std::boxed::Box;
 
 #[embassy_executor::main]
 async fn rp2040_entry(spawner: Spawner) {
@@ -45,7 +44,7 @@ async fn rp2040_entry(spawner: Spawner) {
     let archon_listen_task: Task = Task::new(send_spawner, archon_listen);
     let _ = archon_listen_task.start();
 
-    let archon: &mut Box<ArchonReceiver<32>> = unsafe { ARCHON_RECEIVER.get_mut() };
+    let archon: &mut ArchonReceiver<INPUT_BUFFER> = unsafe { ARCHON_RECEIVER.get_mut() };
 
     loop {
         embassy_futures::yield_now().await;
