@@ -1,12 +1,17 @@
+use crate::configuration::ARCHON_RECEIVER;
+use crate::configuration::INPUT_BUFFER;
 use crate::configuration::WIFI_PASS;
 use crate::configuration::WIFI_SSID;
+use crate::controller::receiver::ArchonEndpoint;
 use crate::controller::receiver::ArchonReceiver;
 
-use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_time;
 use embsys::drivers;
+use embsys::exts::std;
 use embsys::helpers;
+
+use std::boxed::Box;
 
 use helpers::task_handler::TaskState;
 use helpers::wpa_psk::WpaPsk;
@@ -14,22 +19,19 @@ use helpers::wpa_psk::WpaPsk;
 use drivers::hardware::WIFIController;
 use embassy_time::Duration;
 
-// async fn dfu_cancel() {
-//     let watchdog: &mut Watchdog = HWController::watchdog_mut();
+#[embassy_executor::task]
+pub async fn initialize_archon(_s: TaskState) {
+    let mut archon: ArchonReceiver<INPUT_BUFFER> = ArchonReceiver::new();
+    let endpoint: ArchonEndpoint = ArchonEndpoint::new(None, 9688);
+    archon.set_endpoint(endpoint);
 
-//     while !SystemInterface::controller().activity().await {
-//         embassy_futures::yield_now().await;
-//         watchdog.feed();
-//     }
-// }
+    unsafe { ARCHON_RECEIVER.init(archon) };
+}
 
 #[embassy_executor::task]
-pub async fn archon(_s: TaskState) {
-    defmt::info!("running dfu mode");
-
-    let mut archon: ArchonReceiver = ArchonReceiver::new(None, 9688);
+pub async fn archon_listen(_s: TaskState) {
+    let archon: &mut Box<ArchonReceiver<32>> = unsafe { ARCHON_RECEIVER.get_mut() };
     let _ = archon.listen().await;
-    // let _ = with_cancel(dfu.listen(), dfu_cancel()).await;
 }
 
 #[embassy_executor::task]
