@@ -1,5 +1,4 @@
 // BUFFER Setup
-pub const TCP_BUFFER: usize = 32;
 pub const INPUT_BUFFER: usize = 32;
 
 // WIFI Setup

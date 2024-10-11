@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use embsys::crates::defmt;
 use embsys::crates::embassy_time;
 

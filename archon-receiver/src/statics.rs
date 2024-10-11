@@ -1,4 +1,4 @@
-use crate::controller::receiver::ArchonReceiver;
+use crate::receiver::ArchonReceiver;
 
 use embsys::exts::non_std;
 use non_std::cell::OpCellBox;

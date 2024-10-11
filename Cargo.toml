@@ -1,20 +1,6 @@
-[package]
-name = "archon-controller"
-version = "0.1.0"
-edition = "2021"
-
-
-[dependencies.embsys]
-git = "https://github.com/syn-chromatic/embsys-rs.git"
-rev = "fcdc1ea311ca0b237801f2afbd9b74b604fb9a8a"
-package = "embsys"
-features = ["rp2040-probe"]
-
-
-[[bin]]
-name = "archon-controller"
-test = false
-bench = false
+[workspace]
+resolver = "2"
+members = ["archon-core", "archon-receiver", "archon-transmitter"]
 
 
 [profile.dev]

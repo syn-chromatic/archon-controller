@@ -1,9 +1,12 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use super::input::InputType;
-use crate::configuration::TCP_BUFFER;
-use crate::diagnostics::FrameTime;
+use archon_core::consts::TCP_BUFFER;
+use archon_core::diagnostics::frametime::FrameTime;
+use archon_core::endpoint::ArchonEndpoint;
+use archon_core::input::InputType;
+use archon_core::ring::RingBuffer;
+use archon_core::status::ArchonStatus;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_net;
@@ -15,144 +18,12 @@ use drivers::hardware::WIFIController;
 use embassy_net::tcp::AcceptError;
 use embassy_net::tcp::Error as TCPError;
 use embassy_net::tcp::TcpSocket;
-use embassy_net::IpAddress;
 use embassy_net::IpListenEndpoint;
 
 use embassy_time::with_timeout;
 use embassy_time::Duration;
 use embassy_time::Instant;
 use embassy_time::TimeoutError;
-
-struct RingBuffer<T, const SIZE: usize> {
-    buffer: [Option<T>; SIZE],
-    head: usize,
-    tail: usize,
-    is_full: bool,
-}
-
-impl<T, const SIZE: usize> RingBuffer<T, SIZE> {
-    fn new() -> Self {
-        assert!(SIZE > 0, "RingBuffer size must be greater than 0");
-        RingBuffer {
-            buffer: [const { None }; SIZE],
-            head: 0,
-            tail: 0,
-            is_full: false,
-        }
-    }
-
-    fn add(&mut self, item: T) {
-        self.buffer[self.head] = Some(item);
-        self.head = (self.head + 1) % SIZE;
-
-        if self.is_full {
-            self.tail = (self.tail + 1) % SIZE;
-        }
-
-        self.is_full = self.head == self.tail;
-    }
-
-    fn take(&mut self) -> Option<T> {
-        if self.head == self.tail && !self.is_full {
-            return None;
-        }
-
-        let item: Option<T> = self.buffer[self.tail].take();
-        self.tail = (self.tail + 1) % SIZE;
-        self.is_full = false;
-
-        item
-    }
-
-    fn clear(&mut self) {
-        self.head = 0;
-        self.tail = 0;
-        self.is_full = false;
-
-        for i in 0..SIZE {
-            self.buffer[i] = None;
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        self.head == self.tail && !self.is_full
-    }
-
-    fn is_full(&self) -> bool {
-        self.is_full
-    }
-}
-
-pub struct ArchonStatus {
-    is_connected: bool,
-    is_listening: bool,
-}
-
-impl ArchonStatus {
-    pub fn new() -> Self {
-        Self {
-            is_connected: false,
-            is_listening: false,
-        }
-    }
-
-    pub fn set_connected(&mut self, state: bool) {
-        self.is_connected = state;
-    }
-
-    pub fn set_listening(&mut self, state: bool) {
-        self.is_listening = state;
-    }
-
-    pub fn is_connected(&self) -> bool {
-        self.is_connected
-    }
-
-    pub fn is_listening(&self) -> bool {
-        self.is_listening
-    }
-}
-
-pub struct ArchonEndpoint {
-    addr: Option<IpAddress>,
-    port: u16,
-}
-
-impl ArchonEndpoint {
-    pub fn new(addr: Option<IpAddress>, port: u16) -> Self {
-        Self { addr, port }
-    }
-
-    pub fn default() -> Self {
-        Self {
-            addr: None,
-            port: 0,
-        }
-    }
-
-    pub fn set_addr(&mut self, addr: Option<IpAddress>) {
-        self.addr = addr;
-    }
-
-    pub fn set_port(&mut self, port: u16) {
-        self.port = port;
-    }
-
-    pub fn addr(&self) -> Option<IpAddress> {
-        self.addr
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port
-    }
-
-    pub fn endpoint(&self) -> IpListenEndpoint {
-        IpListenEndpoint {
-            addr: self.addr,
-            port: self.port,
-        }
-    }
-}
 
 pub struct ArchonReceiver<const INPUT_BUFFER: usize> {
     status: ArchonStatus,

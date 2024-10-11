@@ -2,13 +2,15 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Firmware",
+            "label": "Archon Receiver Firmware",
             "type": "shell",
             "command": "cargo",
             "args": [
                 "run",
                 "--profile",
                 "${input:profiles}",
+                "--package",
+                "archon-receiver",
                 "--config",
                 ".cargo/runners/${input:runner}.toml",
             ],
@@ -21,9 +23,18 @@
             }
         },
         {
-            "label": "Binary Firmware",
+            "label": "Archon Transmitter Firmware",
             "type": "shell",
-            "command": "cargo objcopy --profile ${input:profiles} --bin albatross-mk1 -- -O binary firmware.bin",
+            "command": "cargo",
+            "args": [
+                "run",
+                "--profile",
+                "${input:profiles}",
+                "--package",
+                "archon-transmitter",
+                "--config",
+                ".cargo/runners/${input:runner}.toml",
+            ],
             "problemMatcher": [
                 "$rustc"
             ],
@@ -32,15 +43,6 @@
                 "isDefault": true
             }
         },
-        {
-            "type": "shell",
-            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/debug/archon-controller",
-            "label": "rust: attach debug",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
-        }
     ],
     "inputs": [
         {

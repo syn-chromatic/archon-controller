@@ -1,9 +1,10 @@
-use crate::configuration::ARCHON_RECEIVER;
-use crate::controller::input::InputType;
-use crate::controller::receiver::ArchonReceiver;
+use crate::statics::ARCHON_RECEIVER;
+use crate::receiver::ArchonReceiver;
 use crate::tasks::archon_listen;
 use crate::tasks::connect_wifi;
 use crate::tasks::initialize_archon;
+
+use archon_core::input::InputType;
 
 use embsys::crates::cortex_m_rt;
 use embsys::crates::defmt;

@@ -7,14 +7,10 @@
 #![feature(trait_alias)]
 #![feature(impl_trait_in_assoc_type)]
 
-extern crate embsys;
-use embsys::crates::emballoc::Allocator;
 
-#[global_allocator]
-static ALLOCATOR: Allocator<163_840> = Allocator::new();
-
-mod configuration;
-mod entry;
-mod tasks;
-mod controller;
-mod diagnostics;
+pub mod input;
+pub mod consts;
+pub mod ring;
+pub mod status;
+pub mod endpoint;
+pub mod diagnostics;

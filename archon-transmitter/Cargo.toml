@@ -1,0 +1,17 @@
+[package]
+name = "archon-transmitter"
+version = "0.1.0"
+edition = "2021"
+
+
+[[bin]]
+name = "archon-transmitter"
+test = false
+bench = false
+
+
+[dependencies.embsys]
+git = "https://github.com/syn-chromatic/embsys-rs.git"
+rev = "fcdc1ea311ca0b237801f2afbd9b74b604fb9a8a"
+package = "embsys"
+features = ["rp2040-probe"]

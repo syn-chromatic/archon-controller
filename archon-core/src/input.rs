@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::configuration::TCP_BUFFER;
+use crate::consts::TCP_BUFFER;
 
 use embsys::crates::defmt;
 

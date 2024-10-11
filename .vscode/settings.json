@@ -1,4 +1,4 @@
 {
-  "rust-analyzer.showUnlinkedFileNotification": false,
-  "task.autoDetect": "off"
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "task.autoDetect": "off"
 }
