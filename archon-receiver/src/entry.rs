@@ -1,8 +1,8 @@
-use crate::statics::ARCHON_RECEIVER;
 use crate::receiver::ArchonReceiver;
+use crate::statics::ARCHON_RECEIVER;
+use crate::tasks::archon_init;
 use crate::tasks::archon_listen;
-use crate::tasks::connect_wifi;
-use crate::tasks::initialize_archon;
+use crate::tasks::wifi_connect;
 
 use archon_core::input::InputType;
 
@@ -27,7 +27,7 @@ async fn rp2040_entry(spawner: Spawner) {
     SysInit::hardware_controller();
 
     let send_spawner: SendSpawner = spawner.make_send();
-    let wifi_task: Task = Task::new(send_spawner, connect_wifi);
+    let wifi_task: Task = Task::new(send_spawner, wifi_connect);
 
     defmt::info!("Initializing WiFi Driver..");
     SysInit::wifi_controller(&spawner).await;
@@ -37,9 +37,9 @@ async fn rp2040_entry(spawner: Spawner) {
     wifi_task.wait().await;
 
     defmt::info!("Initializing Archon..");
-    let init_archon_task: Task = Task::new(send_spawner, initialize_archon);
-    let _ = init_archon_task.start();
-    let _ = init_archon_task.wait().await;
+    let archon_init_task: Task = Task::new(send_spawner, archon_init);
+    let _ = archon_init_task.start();
+    let _ = archon_init_task.wait().await;
 
     defmt::info!("Archon is in listening mode..");
     let archon_listen_task: Task = Task::new(send_spawner, archon_listen);
@@ -53,7 +53,5 @@ async fn rp2040_entry(spawner: Spawner) {
         if let Some(input_type) = input_type {
             input_type.defmt();
         }
-
-        embassy_time::Timer::after_secs(1).await;
     }
 }

@@ -22,7 +22,7 @@ use drivers::hardware::WIFIController;
 use embassy_time::Duration;
 
 #[embassy_executor::task]
-pub async fn initialize_archon(_s: TaskState) {
+pub async fn archon_init(_s: TaskState) {
     let mut archon: ArchonReceiver<INPUT_BUFFER> = ArchonReceiver::new();
     let endpoint: ArchonEndpoint = ArchonEndpoint::new(None, 9688);
     archon.set_endpoint(endpoint);
@@ -37,7 +37,7 @@ pub async fn archon_listen(_s: TaskState) {
 }
 
 #[embassy_executor::task]
-pub async fn connect_wifi(_s: TaskState) {
+pub async fn wifi_connect(_s: TaskState) {
     let wifi_controller: &mut WIFIController = WIFIController::borrow_mut();
 
     let psk: [u8; 32] = WpaPsk::new().derive_psk(WIFI_SSID, WIFI_PASS);
