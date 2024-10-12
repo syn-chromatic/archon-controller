@@ -9,7 +9,7 @@ pub struct RingBuffer<T, const SIZE: usize> {
 }
 
 impl<T, const SIZE: usize> RingBuffer<T, SIZE> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         assert!(SIZE > 0, "RingBuffer size must be greater than 0");
         RingBuffer {
             buffer: [const { None }; SIZE],

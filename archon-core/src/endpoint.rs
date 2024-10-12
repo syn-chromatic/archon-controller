@@ -12,11 +12,11 @@ pub struct ArchonEndpoint {
 }
 
 impl ArchonEndpoint {
-    pub fn new(addr: Option<IpAddress>, port: u16) -> Self {
+    pub const fn new(addr: Option<IpAddress>, port: u16) -> Self {
         Self { addr, port }
     }
 
-    pub fn default() -> Self {
+    pub const fn default() -> Self {
         Self {
             addr: None,
             port: 0,

@@ -7,7 +7,7 @@ pub struct ArchonStatus {
 }
 
 impl ArchonStatus {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             is_connected: false,
             is_listening: false,

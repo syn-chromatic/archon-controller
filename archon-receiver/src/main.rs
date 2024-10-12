@@ -16,5 +16,4 @@ static ALLOCATOR: Allocator<163_840> = Allocator::new();
 mod consts;
 mod entry;
 mod receiver;
-mod statics;
 mod tasks;
