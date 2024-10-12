@@ -7,9 +7,13 @@
 #![feature(trait_alias)]
 #![feature(impl_trait_in_assoc_type)]
 
-use embassy_executor::Spawner;
-use embsys::crates::cortex_m_rt;
-use embsys::crates::embassy_executor;
+extern crate embsys;
+use embsys::crates::emballoc::Allocator;
 
-#[embassy_executor::main]
-async fn entry(_spawner: Spawner) {}
+#[global_allocator]
+static ALLOCATOR: Allocator<163_840> = Allocator::new();
+
+mod consts;
+mod entry;
+mod transmitter;
+mod  tasks;

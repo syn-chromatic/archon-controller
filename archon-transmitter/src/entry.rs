@@ -1,12 +1,7 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-
-use crate::receiver::ArchonReceiver;
-use crate::tasks::archon_init;
-use crate::tasks::archon_listen;
 use crate::tasks::wifi_connect;
+use crate::transmitter::ArchonTransmitter;
 
+use archon_core::endpoint::ArchonEndpoint;
 use archon_core::input::InputType;
 
 use embsys::crates::cortex_m_rt;
@@ -25,7 +20,7 @@ use embassy_executor::Spawner;
 use helpers::task_handler::Task;
 
 #[embassy_executor::main]
-async fn rp2040_entry(spawner: Spawner) {
+async fn entry(spawner: Spawner) {
     defmt::info!("Initializing System..");
     SysInit::hardware_controller();
 
@@ -43,22 +38,9 @@ async fn rp2040_entry(spawner: Spawner) {
     let _ = wifi_task.start();
     wifi_task.wait().await;
 
-    defmt::info!("Initializing Archon..");
-    let archon_init_task: Task = Task::new(send_spawner, archon_init);
-    let _ = archon_init_task.start();
-    let _ = archon_init_task.wait().await;
-
-    defmt::info!("Archon is in listening mode..");
-    let archon_listen_task: Task = Task::new(send_spawner, archon_listen);
-    let _ = archon_listen_task.start();
-
     WIFIController::control_mut().gpio_set(0, true).await;
 
-    loop {
-        embassy_futures::yield_now().await;
-        let input_type: Option<InputType> = ArchonReceiver::read_lock().take();
-        if let Some(input_type) = input_type {
-            input_type.defmt();
-        }
-    }
+    let endpoint = ArchonEndpoint::new(None, 9688);
+    let mut archon = ArchonTransmitter::new(endpoint);
+    let _ = archon.run().await;
 }

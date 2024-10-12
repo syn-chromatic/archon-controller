@@ -10,6 +10,10 @@ test = false
 bench = false
 
 
+[dependencies.archon_core]
+path = "../archon-core"
+
+
 [dependencies.embsys]
 git = "https://github.com/syn-chromatic/embsys-rs.git"
 rev = "fcdc1ea311ca0b237801f2afbd9b74b604fb9a8a"
