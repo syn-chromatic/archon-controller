@@ -18,12 +18,12 @@ use embassy_time::Duration;
 #[embassy_executor::task]
 pub async fn archon_init(_s: TaskState) {
     let endpoint: ArchonEndpoint = ArchonEndpoint::new(None, 9688);
-    ArchonReceiver::read().set_endpoint(endpoint);
+    ArchonReceiver::read_lock().set_endpoint(endpoint);
 }
 
 #[embassy_executor::task]
 pub async fn archon_listen(_s: TaskState) {
-    let _ = ArchonReceiver::read().listen().await;
+    let _ = ArchonReceiver::read_lock().listen().await;
 }
 
 #[embassy_executor::task]

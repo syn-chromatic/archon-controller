@@ -122,14 +122,6 @@ impl ArchonReceiver {
 }
 
 impl ArchonReceiver {
-    pub fn read<'a>() -> RwLockReadGuard<'a, ArchonReceiver> {
-        ARCHON.read()
-    }
-
-    pub fn write<'a>() -> RwLockWriteGuard<'a, ArchonReceiver> {
-        ARCHON.write()
-    }
-
     pub const fn new() -> Self {
         let status: ArchonStatus = ArchonStatus::new();
         let status: Mutex<ArchonStatus> = Mutex::new(status);
@@ -175,5 +167,15 @@ impl ArchonReceiver {
 
     pub fn get_status(&self) -> &Mutex<ArchonStatus> {
         &self.status
+    }
+}
+
+impl ArchonReceiver {
+    pub fn read_lock<'a>() -> RwLockReadGuard<'a, ArchonReceiver> {
+        ARCHON.read()
+    }
+
+    pub fn write_lock<'a>() -> RwLockWriteGuard<'a, ArchonReceiver> {
+        ARCHON.write()
     }
 }

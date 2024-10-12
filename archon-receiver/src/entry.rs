@@ -14,6 +14,7 @@ use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
 use embsys::crates::embassy_time;
+use embsys::drivers::hardware::HWController;
 use embsys::helpers;
 use embsys::setup::SysInit;
 
@@ -48,7 +49,7 @@ async fn rp2040_entry(spawner: Spawner) {
 
     loop {
         embassy_futures::yield_now().await;
-        let input_type: Option<InputType> = ArchonReceiver::read().take();
+        let input_type: Option<InputType> = ArchonReceiver::read_lock().take();
         if let Some(input_type) = input_type {
             input_type.defmt();
         }
