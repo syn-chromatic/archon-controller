@@ -79,7 +79,7 @@ impl ArchonReceiver {
         result
     }
 
-    async fn receive_inputs(&self, tcp: &mut TcpSocket<'_>) {
+    async fn receive_input(&self, tcp: &mut TcpSocket<'_>) {
         let mut frametime: FrameTime = FrameTime::new();
 
         loop {
@@ -142,7 +142,7 @@ impl ArchonReceiver {
         let mut tcp: TcpSocket<'_> = Self::create_socket(&mut rx_buffer, &mut tx_buffer);
 
         self.accept_socket(&mut tcp).await?;
-        self.receive_inputs(&mut tcp).await;
+        self.receive_input(&mut tcp).await;
 
         let _ = self.flush_socket(&mut tcp).await;
         self.ring.lock().clear();
