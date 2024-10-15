@@ -2,15 +2,21 @@
 #![allow(unused_variables)]
 
 use crate::consts::TCP_BUFFER;
+use crate::utils::split_u16;
+use crate::utils::u128_to_u16_max;
+use crate::utils::u8_to_bool;
 
 use embsys::crates::defmt;
+use embsys::devices::buttons;
+
+use buttons::standard::AdvButton;
 
 // DATA REPRESENTATION
 // [1-byte ID, 2-byte Type ID, X-byte Input Data]
 
 #[repr(u16)]
 pub enum InputType {
-    /// 1-byte — [0x00] UP | [0x01] RIGHT | [0x02] DOWN | [0x03] LEFT
+    /// 6-byte — [1-byte DIRECTION] — [1-byte STATE] — [4-byte PRESS DURATION]
     DPad(InputDPad) = 0,
     /// 4-byte — [2-byte XAXIS, 2-byte YAXIS]
     JoyStick(InputJoyStick) = 1,
@@ -61,12 +67,6 @@ impl InputType {
     }
 }
 
-fn split_u16(value: u16) -> [u8; 2] {
-    let msb: u8 = (value >> 8) as u8;
-    let lsb: u8 = (value & 0xFF) as u8;
-    [msb, lsb]
-}
-
 #[repr(u8)]
 pub enum DPad {
     Up = 0,
@@ -86,14 +86,33 @@ impl DPad {
     }
 }
 
+pub struct DPadState {
+    pressed: bool,
+    duration: u16,
+}
+
+impl DPadState {
+    pub fn new(pressed: bool, duration: u16) -> Self {
+        Self { pressed, duration }
+    }
+
+    pub fn from_adv_button(button: &mut AdvButton) -> Self {
+        let pressed: bool = button.is_pressed();
+        let duration: u128 = button.hold_duration_as_millis();
+        let duration: u16 = u128_to_u16_max(duration);
+        Self { pressed, duration }
+    }
+}
+
 pub struct InputDPad {
     id: u8,
     dpad: DPad,
+    state: DPadState,
 }
 
 impl InputDPad {
-    pub fn new(id: u8, dpad: DPad) -> Self {
-        Self { id, dpad }
+    pub fn new(id: u8, dpad: DPad, state: DPadState) -> Self {
+        Self { id, dpad, state }
     }
 
     pub fn as_type(self) -> InputType {
@@ -111,18 +130,32 @@ impl InputDPad {
             3 => DPad::Left,
             _ => panic!("Invalid DPad value: {}", value),
         };
-        Self { id, dpad }
+
+        let pressed: &u8 = &buffer[4];
+        let pressed: bool = u8_to_bool(*value);
+
+        let duration: &[u8] = &buffer[5..=7];
+        let duration: [u8; 2] = duration.try_into().unwrap();
+        let duration: u16 = u16::from_be_bytes(duration);
+
+        let state: DPadState = DPadState { pressed, duration };
+        Self { id, dpad, state }
     }
 
     pub fn to_buffer(&self) -> [u8; TCP_BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x00];
         let dpad_be: u8 = self.dpad.as_u8();
+        let pressed: u8 = self.state.pressed.into();
+        let duration: u16 = self.state.duration.to_be();
+        let duration: [u8; 2] = split_u16(duration);
 
         let mut buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3] = dpad_be;
+        buffer[4] = pressed;
+        buffer[5..=7].copy_from_slice(&duration);
 
         buffer
     }
@@ -133,6 +166,10 @@ impl InputDPad {
 
     pub fn dpad(&self) -> &DPad {
         &self.dpad
+    }
+
+    pub fn state(&self) -> &DPadState {
+        &self.state
     }
 }
 

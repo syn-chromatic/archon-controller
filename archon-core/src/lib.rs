@@ -14,3 +14,5 @@ pub mod ring;
 pub mod status;
 pub mod endpoint;
 pub mod diagnostics;
+pub mod utils;
+pub mod devices;

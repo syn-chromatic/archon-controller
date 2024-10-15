@@ -1,32 +1,18 @@
 use archon_core::consts::TCP_BUFFER;
+use archon_core::devices::dpad::DPadConfiguration;
+use archon_core::devices::dpad::DPadDevice;
+use archon_core::devices::dpad::DPadPins;
 use archon_core::endpoint::ArchonEndpoint;
-use archon_core::input::DPad;
-use archon_core::input::InputDPad;
-use archon_core::input::InputType;
-use archon_core::status::ArchonStatus;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_net;
-use embsys::crates::embassy_rp;
 use embsys::crates::embassy_time;
-use embsys::devices::buttons;
 use embsys::drivers;
 use embsys::exts::std;
 
-use std::sync::Mutex;
-use std::sync::RwLock;
-use std::sync::RwLockReadGuard;
-use std::sync::RwLockWriteGuard;
 use std::time::Duration as StdDuration;
 
-use buttons::standard::AdvButton;
-use drivers::hardware::get_pin;
-use drivers::hardware::InputGPIO;
-use drivers::hardware::InputTrait;
 use drivers::hardware::WIFIController;
-
-use embassy_rp::gpio::Pull;
-use embassy_rp::peripherals::*;
 
 use embassy_net::tcp::AcceptError;
 use embassy_net::tcp::Error as TCPError;
@@ -35,7 +21,6 @@ use embassy_net::IpListenEndpoint;
 
 use embassy_time::with_timeout;
 use embassy_time::Duration;
-use embassy_time::Instant;
 use embassy_time::TimeoutError;
 
 pub struct ArchonTransmitter {
@@ -85,47 +70,23 @@ impl ArchonTransmitter {
     }
 
     async fn send_input(&self, tcp: &mut TcpSocket<'_>) {
-        let bounce_interval = StdDuration::from_millis(20);
-        let repeat_interval = StdDuration::from_millis(100);
-        let repeat_hold = StdDuration::from_millis(500);
+        let bounce_interval: StdDuration = StdDuration::from_millis(20);
+        let repeat_interval: StdDuration = StdDuration::from_millis(100);
+        let repeat_hold: StdDuration = StdDuration::from_millis(500);
 
-        let mut button_1 = AdvButton::new(
-            get_pin(10),
-            &bounce_interval,
-            &repeat_interval,
-            &repeat_hold,
-        );
-        let mut button_2 = AdvButton::new(
-            get_pin(11),
-            &bounce_interval,
-            &repeat_interval,
-            &repeat_hold,
-        );
-        let mut button_3 = AdvButton::new(
-            get_pin(14),
-            &bounce_interval,
-            &repeat_interval,
-            &repeat_hold,
-        );
-        let mut button_4 = AdvButton::new(
-            get_pin(15),
-            &bounce_interval,
-            &repeat_interval,
-            &repeat_hold,
-        );
+        let dpad_pins: DPadPins = DPadPins::new(10, 11, 14, 15);
+        let dpad_conf: DPadConfiguration =
+            DPadConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
+        let mut dpad_device: DPadDevice = DPadDevice::new(&dpad_pins, &dpad_conf);
+
         loop {
-            if button_1.is_pressed() {
-                let dpad = InputDPad::new(0, DPad::Left);
-                let _ = tcp.write(&dpad.to_buffer()).await;
-            } else if button_2.is_pressed() {
-                let dpad = InputDPad::new(0, DPad::Up);
-                let _ = tcp.write(&dpad.to_buffer()).await;
-            } else if button_3.is_pressed() {
-                let dpad = InputDPad::new(0, DPad::Right);
-                let _ = tcp.write(&dpad.to_buffer()).await;
-            } else if button_4.is_pressed() {
-                let dpad = InputDPad::new(0, DPad::Down);
-                let _ = tcp.write(&dpad.to_buffer()).await;
+            let dpad_inputs = dpad_device.get_inputs();
+            for dpad_input in dpad_inputs {
+                if let Some(dpad_input) = dpad_input {
+                    let buffer = dpad_input.to_buffer();
+                    defmt::info!("BUFFER: {:?}", buffer);
+                    let _ = tcp.write(&buffer).await;
+                }
             }
         }
     }

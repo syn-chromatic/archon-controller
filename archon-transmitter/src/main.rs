@@ -13,7 +13,8 @@ use embsys::crates::emballoc::Allocator;
 #[global_allocator]
 static ALLOCATOR: Allocator<163_840> = Allocator::new();
 
+mod button_test;
 mod consts;
 mod entry;
+mod tasks;
 mod transmitter;
-mod  tasks;
