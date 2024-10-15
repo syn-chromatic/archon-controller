@@ -1,5 +1,6 @@
-use crate::button_test::button_test;
 use crate::tasks::wifi_connect;
+use crate::tests::dpad_test;
+use crate::tests::joystick_test;
 use crate::transmitter::ArchonTransmitter;
 
 use archon_core::endpoint::ArchonEndpoint;
@@ -30,24 +31,27 @@ async fn entry(spawner: Spawner) {
 
     WIFIController::control_mut().gpio_set(0, true).await;
 
-    let send_spawner: SendSpawner = spawner.make_send();
-    let wifi_task: Task = Task::new(send_spawner, wifi_connect);
+    joystick_test().await;
+    // dpad_test();
 
-    WIFIController::control_mut().gpio_set(0, false).await;
+    // let send_spawner: SendSpawner = spawner.make_send();
+    // let wifi_task: Task = Task::new(send_spawner, wifi_connect);
 
-    defmt::info!("Initializing Startup Tasks..");
-    let _ = wifi_task.start();
-    wifi_task.wait().await;
+    // WIFIController::control_mut().gpio_set(0, false).await;
 
-    let config_v4 = WIFIController::borrow_mut().get_config_v4();
-    if let Some(config_v4) = config_v4 {
-        let address = config_v4.address;
-        defmt::info!("ADDRESS: {:?}", address);
-    }
+    // defmt::info!("Initializing Startup Tasks..");
+    // let _ = wifi_task.start();
+    // wifi_task.wait().await;
 
-    WIFIController::control_mut().gpio_set(0, true).await;
+    // let config_v4 = WIFIController::borrow_mut().get_config_v4();
+    // if let Some(config_v4) = config_v4 {
+    //     let address = config_v4.address;
+    //     defmt::info!("ADDRESS: {:?}", address);
+    // }
 
-    let endpoint = ArchonEndpoint::new(None, 9688);
-    let mut archon = ArchonTransmitter::new(endpoint);
-    let _ = archon.run().await;
+    // WIFIController::control_mut().gpio_set(0, true).await;
+
+    // let endpoint = ArchonEndpoint::new(None, 9688);
+    // let mut archon = ArchonTransmitter::new(endpoint);
+    // let _ = archon.run().await;
 }

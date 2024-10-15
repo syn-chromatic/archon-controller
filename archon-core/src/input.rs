@@ -84,6 +84,15 @@ impl DPad {
             DPad::Left => 3,
         }
     }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            DPad::Up => "Up",
+            DPad::Right => "Right",
+            DPad::Down => "Down",
+            DPad::Left => "Left",
+        }
+    }
 }
 
 pub struct DPadState {
@@ -134,7 +143,7 @@ impl InputDPad {
         let pressed: &u8 = &buffer[4];
         let pressed: bool = u8_to_bool(*value);
 
-        let duration: &[u8] = &buffer[5..=7];
+        let duration: &[u8] = &buffer[5..=6];
         let duration: [u8; 2] = duration.try_into().unwrap();
         let duration: u16 = u16::from_be_bytes(duration);
 
@@ -155,7 +164,7 @@ impl InputDPad {
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3] = dpad_be;
         buffer[4] = pressed;
-        buffer[5..=7].copy_from_slice(&duration);
+        buffer[5..=6].copy_from_slice(&duration);
 
         buffer
     }

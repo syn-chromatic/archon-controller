@@ -27,6 +27,8 @@ impl JoyStickAdc {
     }
 }
 
+pub struct JoyStickConfiguration {}
+
 pub struct JoyStickDevice {
     adc: JoyStickAdc,
 }

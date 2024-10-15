@@ -127,19 +127,19 @@ impl DPadDevice {
 
         if self.buttons.up.is_pressed() {
             let state: DPadState = DPadState::from_adv_button(&mut self.buttons.up);
-            let dpad: InputDPad = InputDPad::new(0, DPad::Left, state);
+            let dpad: InputDPad = InputDPad::new(0, DPad::Up, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.right.is_pressed() {
             let state: DPadState = DPadState::from_adv_button(&mut self.buttons.right);
-            let dpad: InputDPad = InputDPad::new(0, DPad::Left, state);
+            let dpad: InputDPad = InputDPad::new(0, DPad::Right, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.down.is_pressed() {
             let state: DPadState = DPadState::from_adv_button(&mut self.buttons.down);
-            let dpad: InputDPad = InputDPad::new(0, DPad::Left, state);
+            let dpad: InputDPad = InputDPad::new(0, DPad::Down, state);
             inputs[0] = Some(dpad);
         }
 
