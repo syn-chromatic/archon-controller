@@ -1,4 +1,6 @@
-use archon_core::consts::TCP_BUFFER;
+use crate::consts::INPUT_BUFFER;
+
+use archon_core::consts::UDP_BUFFER;
 use archon_core::devices::dpad::DPadConfiguration;
 use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::dpad::DPadPins;
@@ -7,114 +9,149 @@ use archon_core::endpoint::ArchonEndpoint;
 use archon_core::input::InputDPad;
 use archon_core::input::InputJoyStick;
 use archon_core::input::InputType;
+use archon_core::ring::RingBuffer;
 
 use embsys::crates::defmt;
+use embsys::crates::embassy_futures;
 use embsys::crates::embassy_net;
 use embsys::crates::embassy_time;
 use embsys::drivers;
 use embsys::exts::std;
 
+use std::sync::Mutex;
+use std::sync::RwLock;
+use std::sync::RwLockReadGuard;
+use std::sync::RwLockWriteGuard;
 use std::time::Duration as StdDuration;
 use std::vec::Vec;
 
 use drivers::hardware::WIFIController;
 
-use embassy_net::tcp::AcceptError;
-use embassy_net::tcp::Error as TCPError;
-use embassy_net::tcp::TcpSocket;
+// use embassy_net::udp::AcceptError;
+// use embassy_net::udp::
+
+use embassy_net::udp::PacketMetadata;
+use embassy_net::udp::UdpSocket;
+use embassy_net::IpAddress;
+use embassy_net::IpEndpoint;
 use embassy_net::IpListenEndpoint;
+use embassy_net::Ipv4Address;
 
 use embassy_time::with_timeout;
 use embassy_time::Duration;
 use embassy_time::TimeoutError;
+use embassy_time::Timer;
+
+static ARCHON: RwLock<ArchonTransmitter> = RwLock::new(ArchonTransmitter::new());
 
 pub struct ArchonTransmitter {
-    layout: DeviceLayout,
-    endpoint: ArchonEndpoint,
+    layout: Mutex<DeviceLayout>,
+    endpoint: Mutex<Option<ArchonEndpoint>>,
+    ring: Mutex<RingBuffer<InputType, INPUT_BUFFER>>,
 }
 
 impl ArchonTransmitter {
     fn create_socket<'a>(
-        rx_buffer: &'a mut [u8; TCP_BUFFER],
-        tx_buffer: &'a mut [u8; TCP_BUFFER],
-    ) -> TcpSocket<'a> {
-        defmt::info!("Creating TCP Socket..");
-        let tcp: TcpSocket = TcpSocket::new(WIFIController::stack_ref(), rx_buffer, tx_buffer);
-        defmt::info!("TCP Socket created!");
+        rx_meta: &'a mut [PacketMetadata; UDP_BUFFER],
+        rx_buffer: &'a mut [u8; UDP_BUFFER],
+        tx_meta: &'a mut [PacketMetadata; UDP_BUFFER],
+        tx_buffer: &'a mut [u8; UDP_BUFFER],
+    ) -> UdpSocket<'a> {
+        defmt::info!("Creating UDP Socket..");
+        let tcp: UdpSocket = UdpSocket::new(
+            WIFIController::stack_ref(),
+            rx_meta,
+            rx_buffer,
+            tx_meta,
+            tx_buffer,
+        );
+        defmt::info!("UDP Socket created!");
         tcp
     }
 
-    async fn accept_socket(&self, tcp: &mut TcpSocket<'_>) -> Result<(), AcceptError> {
-        defmt::info!("Awaiting TCP Connection request..");
-        let endpoint: IpListenEndpoint = self.endpoint.endpoint();
-        let result: Result<(), AcceptError> = tcp.accept(endpoint).await;
+    async fn send_inputs(&self, udp: &mut UdpSocket<'_>) {
+        if let Some(endpoint) = &*self.endpoint.lock() {
+            let endpoint: IpEndpoint = endpoint.endpoint();
+            let _ = udp.bind(endpoint.port);
 
-        if let Err(error) = result {
-            self.defmt_tcp_accept_error(&error);
-        } else {
-            defmt::info!("TCP Connection accepted!");
-        }
-        result
-    }
-
-    async fn flush_socket(
-        &self,
-        tcp: &mut TcpSocket<'_>,
-    ) -> Result<Result<(), TCPError>, TimeoutError> {
-        let fut = tcp.flush();
-        let result: Result<Result<(), TCPError>, TimeoutError> =
-            with_timeout(Duration::from_secs(1), fut).await;
-        result
-    }
-
-    async fn send_inputs(&mut self, tcp: &mut TcpSocket<'_>) {
-        loop {
-            let inputs: Vec<InputType> = self.layout.get_inputs().await;
-            for input in inputs {
-                match input {
-                    InputType::DPad(input_dpad) => {
-                        let buffer = input_dpad.to_buffer();
-                        let _ = tcp.write(&buffer).await;
+            loop {
+                embassy_futures::yield_now().await;
+                let input = self.ring.lock().take();
+                if let Some(input) = input {
+                    match input {
+                        InputType::DPad(input_dpad) => {
+                            let buffer = input_dpad.to_buffer();
+                            let _ = udp.send_to(&buffer, endpoint).await;
+                        }
+                        InputType::JoyStick(input_joystick) => {
+                            let buffer = input_joystick.to_buffer();
+                            let _ = udp.send_to(&buffer, endpoint).await;
+                        }
+                        InputType::ASCII(_input_ascii) => todo!(),
+                        InputType::Rotary(_input_rotary) => todo!(),
                     }
-                    InputType::JoyStick(input_joystick) => {
-                        let buffer = input_joystick.to_buffer();
-                        let _ = tcp.write(&buffer).await;
-                    }
-                    InputType::ASCII(_input_ascii) => todo!(),
-                    InputType::Rotary(_input_rotary) => todo!(),
                 }
             }
-        }
-    }
-
-    fn defmt_tcp_accept_error(&self, error: &AcceptError) {
-        match error {
-            AcceptError::InvalidState => defmt::info!("AcceptError: InvalidState"),
-            AcceptError::InvalidPort => defmt::info!("AcceptError: InvalidPort"),
-            AcceptError::ConnectionReset => defmt::info!("AcceptError: ConnectionReset"),
-        }
-    }
-
-    fn defmt_tcp_error(&self, error: TCPError) {
-        match error {
-            TCPError::ConnectionReset => defmt::info!("Connecting Reset Error"),
         }
     }
 }
 
 impl ArchonTransmitter {
-    pub fn new(layout: DeviceLayout, endpoint: ArchonEndpoint) -> Self {
-        Self { layout, endpoint }
+    pub const fn new() -> Self {
+        let layout: DeviceLayout = DeviceLayout::new();
+        let layout: Mutex<DeviceLayout> = Mutex::new(layout);
+        let endpoint: Mutex<Option<ArchonEndpoint>> = Mutex::new(None);
+        let ring: RingBuffer<InputType, INPUT_BUFFER> = RingBuffer::new();
+        let ring: Mutex<RingBuffer<InputType, INPUT_BUFFER>> = Mutex::new(ring);
+        Self {
+            layout,
+            endpoint,
+            ring,
+        }
     }
 
-    pub async fn run(&mut self) -> Result<(), AcceptError> {
-        let mut rx_buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
-        let mut tx_buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
-        let mut tcp: TcpSocket<'_> = Self::create_socket(&mut rx_buffer, &mut tx_buffer);
+    pub fn device_layout(&self) -> &Mutex<DeviceLayout> {
+        &self.layout
+    }
 
-        self.accept_socket(&mut tcp).await?;
-        self.send_inputs(&mut tcp).await;
-        let _ = self.flush_socket(&mut tcp).await;
+    pub fn endpoint(&self) -> &Mutex<Option<ArchonEndpoint>> {
+        &self.endpoint
+    }
+
+    pub fn set_endpoint(&self, endpoint: ArchonEndpoint) {
+        *self.endpoint.lock() = Some(endpoint);
+    }
+
+    pub async fn send(&self) -> Result<(), ()> {
+        let mut rx_meta: [PacketMetadata; UDP_BUFFER] = [PacketMetadata::EMPTY; UDP_BUFFER];
+        let mut rx_buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
+        let mut tx_meta: [PacketMetadata; UDP_BUFFER] = [PacketMetadata::EMPTY; UDP_BUFFER];
+        let mut tx_buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
+
+        let mut udp: UdpSocket<'_> =
+            Self::create_socket(&mut rx_meta, &mut rx_buffer, &mut tx_meta, &mut tx_buffer);
+        self.send_inputs(&mut udp).await;
+
         Ok(())
+    }
+
+    pub async fn collect(&self) {
+        loop {
+            embassy_futures::yield_now().await;
+            let inputs: Vec<InputType> = self.layout.lock().get_inputs().await;
+            for input in inputs {
+                self.ring.lock().add(input);
+            }
+        }
+    }
+}
+
+impl ArchonTransmitter {
+    pub fn read_lock<'a>() -> RwLockReadGuard<'a, ArchonTransmitter> {
+        ARCHON.read()
+    }
+
+    pub fn write_lock<'a>() -> RwLockWriteGuard<'a, ArchonTransmitter> {
+        ARCHON.write()
     }
 }

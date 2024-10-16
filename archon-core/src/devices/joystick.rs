@@ -1,3 +1,5 @@
+use super::polling::DevicePolling;
+
 use crate::input::InputJoyStick;
 use crate::input::InputType;
 use crate::utils::EMA;
@@ -93,15 +95,17 @@ pub struct JoyStickConfiguration {
     origin: JoyStickCoordinate,
     filter: JoyStickFilter,
     offset: JoyStickOffset,
+    polling: DevicePolling,
 }
 
 impl JoyStickConfiguration {
-    pub fn new(origin: JoyStickCoordinate, filter: JoyStickFilter) -> Self {
+    pub fn new(origin: JoyStickCoordinate, filter: JoyStickFilter, polling: DevicePolling) -> Self {
         let offset: JoyStickOffset = JoyStickOffset::new();
         Self {
             origin,
             filter,
             offset,
+            polling,
         }
     }
 }
@@ -172,8 +176,10 @@ impl JoyStickDevice {
 
         let state: Option<(u16, u16)> = self.state.update(x, y);
         if let Some(state) = state {
-            let joystick: InputJoyStick = InputJoyStick::new(0, state.0, state.1);
-            return Ok(Some(joystick));
+            if self.conf.polling.poll() {
+                let joystick: InputJoyStick = InputJoyStick::new(0, state.0, state.1);
+                return Ok(Some(joystick));
+            }
         }
 
         Ok(None)

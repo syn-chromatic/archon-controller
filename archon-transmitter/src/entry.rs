@@ -1,6 +1,8 @@
 #[allow(unused_imports)]
 use crate::tests;
 
+use crate::tasks::archon_collect;
+use crate::tasks::archon_send;
 use crate::tasks::wifi_connect;
 use crate::transmitter::ArchonTransmitter;
 
@@ -13,21 +15,26 @@ use archon_core::devices::joystick::JoyStickCoordinate;
 use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::joystick::JoyStickFilter;
 use archon_core::devices::layout::DeviceLayout;
+use archon_core::devices::polling::DevicePolling;
+use archon_core::endpoint::ArchonAddressIPv4;
 use archon_core::endpoint::ArchonEndpoint;
 
 use embsys::crates::cortex_m_rt;
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
+use embsys::crates::embassy_time;
 use embsys::drivers::hardware::HWController;
 use embsys::drivers::hardware::WIFIController;
 use embsys::exts::std;
 use embsys::helpers;
 use embsys::setup::SysInit;
 
+use std::sync::Mutex;
 use std::time::Duration as StdDuration;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
+use embassy_time::Duration;
 
 use helpers::task_handler::Task;
 
@@ -50,22 +57,22 @@ async fn create_joystick_device() -> JoyStickDevice {
 
     let joystick_origin: JoyStickCoordinate = JoyStickCoordinate::TopRight;
     let joystick_filter: JoyStickFilter = JoyStickFilter::ema(5);
+    let joystick_polling: DevicePolling = DevicePolling::new(Duration::from_millis(10));
+
     let joystick_conf: JoyStickConfiguration =
-        JoyStickConfiguration::new(joystick_origin, joystick_filter);
+        JoyStickConfiguration::new(joystick_origin, joystick_filter, joystick_polling);
 
     let mut joystick_device: JoyStickDevice = JoyStickDevice::new(joystick_adc, joystick_conf);
-    let _ = joystick_device.calibrate_center(1000).await;
+    let _ = joystick_device.calibrate_center(5000).await;
 
     joystick_device
 }
 
-async fn create_device_layout() -> DeviceLayout {
+async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
     let dpad_device: DPadDevice = create_dpad_device();
     let joystick_device: JoyStickDevice = create_joystick_device().await;
-    let mut device_layout: DeviceLayout = DeviceLayout::new();
-    device_layout.add_dpad(dpad_device);
-    device_layout.add_joystick(joystick_device);
-    device_layout
+    layout.lock().add_dpad(dpad_device);
+    layout.lock().add_joystick(joystick_device);
 }
 
 #[embassy_executor::main]
@@ -98,8 +105,17 @@ async fn entry(spawner: Spawner) {
 
     WIFIController::control_mut().gpio_set(0, true).await;
 
-    let layout: DeviceLayout = create_device_layout().await;
-    let endpoint: ArchonEndpoint = ArchonEndpoint::new(None, 9688);
-    let mut archon: ArchonTransmitter = ArchonTransmitter::new(layout, endpoint);
-    let _ = archon.run().await;
+    let endpoint: ArchonEndpoint =
+        ArchonEndpoint::new(ArchonAddressIPv4::new(192, 168, 2, 132), 9688);
+    ArchonTransmitter::read_lock().set_endpoint(endpoint);
+
+    set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
+
+    defmt::info!("Archon Collecting..");
+    let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
+    let _ = archon_collect_task.start();
+
+    defmt::info!("Archon Sending..");
+    let archon_send_task: Task = Task::new(send_spawner, archon_send);
+    let _ = archon_send_task.start();
 }

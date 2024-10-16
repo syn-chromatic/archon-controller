@@ -2,4 +2,4 @@
 #![allow(unused_variables)]
 
 // BUFFER Setup
-pub const TCP_BUFFER: usize = 32;
+pub const UDP_BUFFER: usize = 32;

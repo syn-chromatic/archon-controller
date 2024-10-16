@@ -1,5 +1,6 @@
 use crate::consts::WIFI_PASS;
 use crate::consts::WIFI_SSID;
+use crate::transmitter::ArchonTransmitter;
 
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_time;
@@ -11,6 +12,16 @@ use helpers::wpa_psk::WpaPsk;
 
 use drivers::hardware::WIFIController;
 use embassy_time::Duration;
+
+#[embassy_executor::task]
+pub async fn archon_send(_s: TaskState) {
+    let _ = ArchonTransmitter::read_lock().send().await;
+}
+
+#[embassy_executor::task]
+pub async fn archon_collect(_s: TaskState) {
+    let _ = ArchonTransmitter::read_lock().collect().await;
+}
 
 #[embassy_executor::task]
 pub async fn wifi_connect(_s: TaskState) {

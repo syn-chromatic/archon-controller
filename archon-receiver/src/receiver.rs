@@ -3,9 +3,9 @@
 
 use crate::consts::INPUT_BUFFER;
 
-use archon_core::consts::TCP_BUFFER;
+use archon_core::consts::UDP_BUFFER;
 use archon_core::diagnostics::frametime::FrameTime;
-use archon_core::endpoint::ArchonEndpoint;
+use archon_core::endpoint::ArchonListenEndpoint;
 use archon_core::input::InputType;
 use archon_core::ring::RingBuffer;
 use archon_core::status::ArchonStatus;
@@ -37,14 +37,14 @@ static ARCHON: RwLock<ArchonReceiver> = RwLock::new(ArchonReceiver::new());
 
 pub struct ArchonReceiver {
     status: Mutex<ArchonStatus>,
-    endpoint: Mutex<ArchonEndpoint>,
+    endpoint: Mutex<ArchonListenEndpoint>,
     ring: Mutex<RingBuffer<InputType, INPUT_BUFFER>>,
 }
 
 impl ArchonReceiver {
     fn create_socket<'a>(
-        rx_buffer: &'a mut [u8; TCP_BUFFER],
-        tx_buffer: &'a mut [u8; TCP_BUFFER],
+        rx_buffer: &'a mut [u8; UDP_BUFFER],
+        tx_buffer: &'a mut [u8; UDP_BUFFER],
     ) -> TcpSocket<'a> {
         defmt::info!("Creating TCP Socket..");
         let tcp: TcpSocket = TcpSocket::new(WIFIController::stack_ref(), rx_buffer, tx_buffer);
@@ -100,7 +100,7 @@ impl ArchonReceiver {
 
     fn read_input(buffer: &mut [u8]) -> (usize, InputType) {
         defmt::info!("Len: {} | Buffer: {:?}", buffer.len(), buffer);
-        let input_buffer: [u8; TCP_BUFFER] = buffer.try_into().unwrap();
+        let input_buffer: [u8; UDP_BUFFER] = buffer.try_into().unwrap();
         let input_type: InputType = InputType::from_buffer(&input_buffer);
 
         (buffer.len(), input_type)
@@ -125,8 +125,8 @@ impl ArchonReceiver {
     pub const fn new() -> Self {
         let status: ArchonStatus = ArchonStatus::new();
         let status: Mutex<ArchonStatus> = Mutex::new(status);
-        let endpoint: ArchonEndpoint = ArchonEndpoint::default();
-        let endpoint: Mutex<ArchonEndpoint> = Mutex::new(endpoint);
+        let endpoint: ArchonListenEndpoint = ArchonListenEndpoint::default();
+        let endpoint: Mutex<ArchonListenEndpoint> = Mutex::new(endpoint);
         let ring: RingBuffer<InputType, INPUT_BUFFER> = RingBuffer::new();
         let ring: Mutex<RingBuffer<InputType, INPUT_BUFFER>> = Mutex::new(ring);
         Self {
@@ -137,8 +137,8 @@ impl ArchonReceiver {
     }
 
     pub async fn listen(&self) -> Result<(), AcceptError> {
-        let mut rx_buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
-        let mut tx_buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
+        let mut rx_buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
+        let mut tx_buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
         let mut tcp: TcpSocket<'_> = Self::create_socket(&mut rx_buffer, &mut tx_buffer);
 
         self.accept_socket(&mut tcp).await?;
@@ -157,11 +157,11 @@ impl ArchonReceiver {
         self.ring.lock().take()
     }
 
-    pub fn set_endpoint(&self, endpoint: ArchonEndpoint) {
+    pub fn set_endpoint(&self, endpoint: ArchonListenEndpoint) {
         *self.endpoint.lock() = endpoint;
     }
 
-    pub fn get_endpoint(&self) -> &Mutex<ArchonEndpoint> {
+    pub fn get_endpoint(&self) -> &Mutex<ArchonListenEndpoint> {
         &self.endpoint
     }
 

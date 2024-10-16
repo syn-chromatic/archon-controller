@@ -6,6 +6,7 @@ use crate::input::DPadState;
 use crate::input::InputDPad;
 use crate::input::InputType;
 
+use embsys::crates::defmt;
 use embsys::crates::embassy_rp;
 use embsys::devices::buttons;
 use embsys::drivers::hardware;
@@ -14,9 +15,46 @@ use embsys::exts::std;
 use std::time::Duration;
 
 use buttons::standard::AdvButton;
+use buttons::standard::Button;
+
 use hardware::get_pin;
+use hardware::InputGPIO;
+use hardware::InputTrait;
 
 use embassy_rp::gpio::AnyPin;
+use embassy_rp::gpio::Pin;
+use embassy_rp::gpio::Pull;
+
+pub struct DPadButton {
+    vpin: u8,
+    gpio: InputGPIO,
+}
+
+impl DPadButton {
+    fn register_pin(pin: impl Pin) -> InputGPIO {
+        let pull: Pull = Pull::Up;
+        let gpio: InputGPIO = InputGPIO::new(pin, pull);
+        gpio
+    }
+}
+
+impl DPadButton {
+    pub fn new(pin: impl Pin) -> Self {
+        let vpin: u8 = pin.pin();
+        let gpio: InputGPIO = Self::register_pin(pin);
+
+        Self { vpin, gpio }
+    }
+
+    pub fn vpin(&self) -> u8 {
+        self.vpin
+    }
+
+    pub fn is_pressed(&mut self) -> bool {
+        let test = self.gpio.read();
+        !test
+    }
+}
 
 #[derive(Copy, Clone)]
 pub struct DPadPins {
@@ -105,6 +143,34 @@ impl DPadButtons {
         }
     }
 }
+
+// pub struct DPadButtons {
+//     up: DPadButton,
+//     right: DPadButton,
+//     down: DPadButton,
+//     left: DPadButton,
+// }
+
+// impl DPadButtons {
+//     pub fn new(pins: &DPadPins, conf: &DPadConfiguration) -> Self {
+//         let up_pin: AnyPin = get_pin(pins.up);
+//         let right_pin: AnyPin = get_pin(pins.right);
+//         let down_pin: AnyPin = get_pin(pins.down);
+//         let left_pin: AnyPin = get_pin(pins.left);
+
+//         let up: DPadButton = DPadButton::new(up_pin);
+//         let right: DPadButton = DPadButton::new(right_pin);
+//         let down: DPadButton = DPadButton::new(down_pin);
+//         let left: DPadButton = DPadButton::new(left_pin);
+
+//         Self {
+//             up,
+//             right,
+//             down,
+//             left,
+//         }
+//     }
+// }
 
 pub struct DPadDevice {
     pins: DPadPins,

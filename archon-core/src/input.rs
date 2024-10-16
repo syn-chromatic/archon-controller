@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::consts::TCP_BUFFER;
+use crate::consts::UDP_BUFFER;
+use crate::devices::dpad::DPadButton;
 use crate::utils::split_u16;
 use crate::utils::u128_to_u16_max;
 use crate::utils::u8_to_bool;
@@ -10,6 +11,7 @@ use embsys::crates::defmt;
 use embsys::devices::buttons;
 
 use buttons::standard::AdvButton;
+use buttons::standard::Button;
 
 // DATA REPRESENTATION
 // [1-byte ID, 2-byte Type ID, X-byte Input Data]
@@ -27,7 +29,7 @@ pub enum InputType {
 }
 
 impl InputType {
-    pub fn from_buffer(buffer: &[u8; TCP_BUFFER]) -> InputType {
+    pub fn from_buffer(buffer: &[u8; UDP_BUFFER]) -> InputType {
         let bytes: &[u8] = &buffer[1..=2];
         let bytes: [u8; 2] = bytes.try_into().unwrap();
         let type_id: u16 = u16::from_be_bytes(bytes);
@@ -111,6 +113,20 @@ impl DPadState {
         let duration: u16 = u128_to_u16_max(duration);
         Self { pressed, duration }
     }
+
+    pub fn from_button(button: &mut Button) -> Self {
+        let pressed: bool = button.is_pressed();
+        let duration: u128 = 0;
+        let duration: u16 = u128_to_u16_max(duration);
+        Self { pressed, duration }
+    }
+
+    pub fn from_dpad_button(button: &mut DPadButton) -> Self {
+        let pressed: bool = button.is_pressed();
+        let duration: u128 = 0;
+        let duration: u16 = u128_to_u16_max(duration);
+        Self { pressed, duration }
+    }
 }
 
 pub struct InputDPad {
@@ -128,7 +144,7 @@ impl InputDPad {
         InputType::DPad(self)
     }
 
-    pub fn from_buffer(buffer: &[u8; TCP_BUFFER]) -> Self {
+    pub fn from_buffer(buffer: &[u8; UDP_BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let value: &u8 = &buffer[3];
 
@@ -151,7 +167,7 @@ impl InputDPad {
         Self { id, dpad, state }
     }
 
-    pub fn to_buffer(&self) -> [u8; TCP_BUFFER] {
+    pub fn to_buffer(&self) -> [u8; UDP_BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x00];
         let dpad_be: u8 = self.dpad.as_u8();
@@ -159,7 +175,7 @@ impl InputDPad {
         let duration: u16 = self.state.duration.to_be();
         let duration: [u8; 2] = split_u16(duration);
 
-        let mut buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
+        let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3] = dpad_be;
@@ -197,7 +213,7 @@ impl InputJoyStick {
         InputType::JoyStick(self)
     }
 
-    pub fn from_buffer(buffer: &[u8; TCP_BUFFER]) -> Self {
+    pub fn from_buffer(buffer: &[u8; UDP_BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let x_bytes: &[u8] = &buffer[3..=4];
         let y_bytes: &[u8] = &buffer[5..=6];
@@ -211,13 +227,13 @@ impl InputJoyStick {
         Self { id, x, y }
     }
 
-    pub fn to_buffer(&self) -> [u8; TCP_BUFFER] {
+    pub fn to_buffer(&self) -> [u8; UDP_BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x01];
         let x_be: [u8; 2] = split_u16(self.x);
         let y_be: [u8; 2] = split_u16(self.y);
 
-        let mut buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
+        let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3..=4].copy_from_slice(&x_be);
@@ -257,7 +273,7 @@ impl InputASCII {
         InputType::ASCII(self)
     }
 
-    pub fn from_buffer(buffer: &[u8; TCP_BUFFER]) -> Self {
+    pub fn from_buffer(buffer: &[u8; UDP_BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let bytes: &u8 = &buffer[3];
         let bytes: u32 = *bytes as u32;
@@ -266,12 +282,12 @@ impl InputASCII {
         Self { id, char }
     }
 
-    pub fn to_buffer(&self) -> [u8; TCP_BUFFER] {
+    pub fn to_buffer(&self) -> [u8; UDP_BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x02];
         let char_be: u8 = self.char as u8;
 
-        let mut buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
+        let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3] = char_be;
@@ -302,7 +318,7 @@ impl InputRotary {
         InputType::Rotary(self)
     }
 
-    pub fn from_buffer(buffer: &[u8; TCP_BUFFER]) -> Self {
+    pub fn from_buffer(buffer: &[u8; UDP_BUFFER]) -> Self {
         let id: u8 = *&buffer[0];
         let bytes: &[u8] = &buffer[3..=4];
         let bytes: [u8; 2] = bytes.try_into().unwrap();
@@ -311,12 +327,12 @@ impl InputRotary {
         Self { id, value }
     }
 
-    pub fn to_buffer(&self) -> [u8; TCP_BUFFER] {
+    pub fn to_buffer(&self) -> [u8; UDP_BUFFER] {
         let id_be: u8 = self.id.to_be();
         let type_be: [u8; 2] = [0x00, 0x03];
         let value_be: [u8; 2] = split_u16(self.value);
 
-        let mut buffer: [u8; TCP_BUFFER] = [0; TCP_BUFFER];
+        let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
         buffer[0] = id_be;
         buffer[1..=2].copy_from_slice(&type_be);
         buffer[3..=4].copy_from_slice(&value_be);

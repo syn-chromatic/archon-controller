@@ -2,7 +2,7 @@ use crate::consts::WIFI_PASS;
 use crate::consts::WIFI_SSID;
 use crate::receiver::ArchonReceiver;
 
-use archon_core::endpoint::ArchonEndpoint;
+use archon_core::endpoint::ArchonListenEndpoint;
 
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_time;
@@ -17,7 +17,7 @@ use embassy_time::Duration;
 
 #[embassy_executor::task]
 pub async fn archon_init(_s: TaskState) {
-    let endpoint: ArchonEndpoint = ArchonEndpoint::new(None, 9688);
+    let endpoint: ArchonListenEndpoint = ArchonListenEndpoint::new(None, 9688);
     ArchonReceiver::read_lock().set_endpoint(endpoint);
 }
 

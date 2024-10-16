@@ -1,4 +1,4 @@
-use archon_core::consts::TCP_BUFFER;
+use archon_core::consts::UDP_BUFFER;
 use archon_core::devices::dpad::DPadButtons;
 use archon_core::devices::dpad::DPadConfiguration;
 use archon_core::devices::dpad::DPadDevice;
@@ -8,7 +8,8 @@ use archon_core::devices::joystick::JoyStickConfiguration;
 use archon_core::devices::joystick::JoyStickCoordinate;
 use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::joystick::JoyStickFilter;
-use archon_core::endpoint::ArchonEndpoint;
+use archon_core::devices::polling::DevicePolling;
+use archon_core::endpoint::ArchonListenEndpoint;
 use archon_core::input::DPad;
 use archon_core::input::DPadState;
 use archon_core::input::InputDPad;
@@ -75,13 +76,15 @@ pub fn dpad_test() {
 }
 
 pub async fn joystick_test() {
-    let x_pin = HWController::pac().PIN_26;
-    let y_pin = HWController::pac().PIN_27;
-    let joystick_adc = JoyStickAdc::new(x_pin, y_pin);
+    let x_pin: PIN_26 = HWController::pac().PIN_26;
+    let y_pin: PIN_27 = HWController::pac().PIN_27;
+    let joystick_adc: JoyStickAdc = JoyStickAdc::new(x_pin, y_pin);
 
-    let joystick_origin = JoyStickCoordinate::TopRight;
-    let joystick_filter = JoyStickFilter::ema(20);
-    let joystick_conf = JoyStickConfiguration::new(joystick_origin, joystick_filter);
+    let joystick_origin: JoyStickCoordinate = JoyStickCoordinate::TopRight;
+    let joystick_filter: JoyStickFilter = JoyStickFilter::ema(20);
+    let joystick_polling: DevicePolling = DevicePolling::new(Duration::from_millis(10));
+    let joystick_conf: JoyStickConfiguration =
+        JoyStickConfiguration::new(joystick_origin, joystick_filter, joystick_polling);
 
     let mut joystick_device = JoyStickDevice::new(joystick_adc, joystick_conf);
     let _ = joystick_device.calibrate_center(5000).await;
