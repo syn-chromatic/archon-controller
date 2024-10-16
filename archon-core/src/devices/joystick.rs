@@ -132,7 +132,6 @@ impl JoyStickState {
 
 pub struct JoyStickDevice {
     adc: JoyStickAdc,
-    state: JoyStickState,
     conf: JoyStickConfiguration,
 }
 
@@ -162,8 +161,7 @@ impl JoyStickDevice {
 
 impl JoyStickDevice {
     pub fn new(adc: JoyStickAdc, conf: JoyStickConfiguration) -> Self {
-        let state: JoyStickState = JoyStickState::new();
-        Self { adc, state, conf }
+        Self { adc, conf }
     }
 
     pub async fn get_input(&mut self) -> Result<Option<InputJoyStick>, AdcError> {
@@ -174,12 +172,9 @@ impl JoyStickDevice {
         self.conf.offset.apply(&mut x, &mut y);
         self.apply_filter(&mut x, &mut y);
 
-        let state: Option<(u16, u16)> = self.state.update(x, y);
-        if let Some(state) = state {
-            if self.conf.polling.poll() {
-                let joystick: InputJoyStick = InputJoyStick::new(0, state.0, state.1);
-                return Ok(Some(joystick));
-            }
+        if self.conf.polling.poll() {
+            let joystick: InputJoyStick = InputJoyStick::new(0, x, y);
+            return Ok(Some(joystick));
         }
 
         Ok(None)
