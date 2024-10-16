@@ -16,3 +16,8 @@ git = "https://github.com/syn-chromatic/embsys-rs.git"
 rev = "fb0c3b301c8e59da56f6ec9075be872676cefa6a"
 package = "embsys"
 features = ["rp2040-probe"]
+
+
+[dependencies.num]
+version = "0.4"
+default-features = false

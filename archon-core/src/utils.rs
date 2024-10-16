@@ -1,3 +1,7 @@
+use num::cast::AsPrimitive;
+use num::NumCast;
+use num::Unsigned;
+
 pub fn u128_to_u16_max(value: u128) -> u16 {
     if value > u16::MAX as u128 {
         u16::MAX
@@ -21,36 +25,43 @@ pub fn u8_to_bool(value: u8) -> bool {
     panic!("u8 value is not a boolean: {}", value);
 }
 
-pub struct ExponentialMovingAverage {
+/// Exponential Moving Average
+pub struct EMA<T> {
     alpha: f32,
-    ema: Option<f32>,
+    ema: Option<T>,
 }
 
-impl ExponentialMovingAverage {
+impl<T> EMA<T>
+where
+    T: Unsigned + Copy + AsPrimitive<f32> + NumCast,
+{
     pub fn new(alpha: f32) -> Self {
         assert!(
             alpha >= 0.0 && alpha <= 1.0,
-            "Alpha must be between 0 and 1"
+            "Alpha must be between 0.0 and 1.0"
         );
-        ExponentialMovingAverage { alpha, ema: None }
+        EMA { alpha, ema: None }
     }
 
     pub fn from_period(period: usize) -> Self {
         assert!(period > 0, "Period must be greater than 0");
         let alpha: f32 = 2.0 / (period as f32 + 1.0);
-        ExponentialMovingAverage::new(alpha)
+        EMA::new(alpha)
     }
 
-    pub fn update(&mut self, new_value: f32) -> f32 {
-        self.ema = match self.ema {
-            Some(current_ema) => Some(self.alpha * new_value + (1.0 - self.alpha) * current_ema),
-            None => Some(new_value),
-        };
+    pub fn update(&mut self, value: T) -> T {
+        if let Some(ema) = self.ema {
+            let ema_f32: f32 = self.alpha * value.as_() + (1.0 - self.alpha) * ema.as_();
+            let ema: T = T::from(ema_f32).expect("Conversion failed");
 
-        self.ema.unwrap()
+            self.ema = Some(ema);
+            return ema;
+        }
+        self.ema = Some(value);
+        value
     }
 
-    pub fn value(&self) -> Option<f32> {
+    pub fn value(&self) -> Option<T> {
         self.ema
     }
 }

@@ -28,14 +28,6 @@ pub struct ArchonTransmitter {
 }
 
 impl ArchonTransmitter {
-    fn print_incomplete_chunk(&self, chunk: usize, sent: usize) {
-        defmt::info!(
-            "Incomplete chunk sent! => Chunk: {} | Sent: {}",
-            chunk,
-            sent
-        );
-    }
-
     fn create_socket<'a>(
         rx_buffer: &'a mut [u8; TCP_BUFFER],
         tx_buffer: &'a mut [u8; TCP_BUFFER],
