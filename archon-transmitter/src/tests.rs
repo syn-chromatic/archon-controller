@@ -80,19 +80,21 @@ pub async fn joystick_test() {
     let joystick_adc = JoyStickAdc::new(x_pin, y_pin);
 
     let joystick_origin = JoyStickCoordinate::TopRight;
-    let joystick_filter = JoyStickFilter::ema(5);
+    let joystick_filter = JoyStickFilter::ema(20);
     let joystick_conf = JoyStickConfiguration::new(joystick_origin, joystick_filter);
 
     let mut joystick_device = JoyStickDevice::new(joystick_adc, joystick_conf);
-    let _ = joystick_device.calibrate_center(1000).await;
+    let _ = joystick_device.calibrate_center(5000).await;
 
     loop {
         let joystick_input = joystick_device.get_input().await;
         if let Ok(joystick_input) = joystick_input {
             // let buffer = joystick_input.to_buffer();
             // defmt::info!("BUFFER: {:?}", buffer);
-            defmt::info!("X: {:?} | Y: {:?}", joystick_input.x(), joystick_input.y());
-            Timer::after_millis(100).await;
+            if let Some(joystick_input) = joystick_input {
+                defmt::info!("X: {:?} | Y: {:?}", joystick_input.x(), joystick_input.y());
+            }
+            // Timer::after_millis(100).await;
         }
     }
 }

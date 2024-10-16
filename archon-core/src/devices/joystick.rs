@@ -1,4 +1,5 @@
 use crate::input::InputJoyStick;
+use crate::input::InputType;
 use crate::utils::EMA;
 
 use embsys::crates::embassy_rp;
@@ -105,8 +106,29 @@ impl JoyStickConfiguration {
     }
 }
 
+pub struct JoyStickState {
+    x: u16,
+    y: u16,
+}
+
+impl JoyStickState {
+    pub fn new() -> Self {
+        Self { x: 0, y: 0 }
+    }
+
+    pub fn update(&mut self, x: u16, y: u16) -> Option<(u16, u16)> {
+        if self.x != x || self.y != y {
+            self.x = x;
+            self.y = y;
+            return Some((x, y));
+        }
+        None
+    }
+}
+
 pub struct JoyStickDevice {
     adc: JoyStickAdc,
+    state: JoyStickState,
     conf: JoyStickConfiguration,
 }
 
@@ -136,10 +158,11 @@ impl JoyStickDevice {
 
 impl JoyStickDevice {
     pub fn new(adc: JoyStickAdc, conf: JoyStickConfiguration) -> Self {
-        Self { adc, conf }
+        let state: JoyStickState = JoyStickState::new();
+        Self { adc, state, conf }
     }
 
-    pub async fn get_input(&mut self) -> Result<InputJoyStick, AdcError> {
+    pub async fn get_input(&mut self) -> Result<Option<InputJoyStick>, AdcError> {
         let mut x: u16 = self.adc.x.read().await?;
         let mut y: u16 = self.adc.y.read().await?;
 
@@ -147,8 +170,22 @@ impl JoyStickDevice {
         self.conf.offset.apply(&mut x, &mut y);
         self.apply_filter(&mut x, &mut y);
 
-        let joystick: InputJoyStick = InputJoyStick::new(0, x, y);
-        Ok(joystick)
+        let state: Option<(u16, u16)> = self.state.update(x, y);
+        if let Some(state) = state {
+            let joystick: InputJoyStick = InputJoyStick::new(0, state.0, state.1);
+            return Ok(Some(joystick));
+        }
+
+        Ok(None)
+    }
+
+    pub async fn get_input_as_type(&mut self) -> Result<Option<InputType>, AdcError> {
+        let joystick: Option<InputJoyStick> = self.get_input().await?;
+        if let Some(joystick) = joystick {
+            let input: InputType = InputType::JoyStick(joystick);
+            return Ok(Some(input));
+        }
+        Ok(None)
     }
 
     pub async fn calibrate_center(&mut self, samples: usize) -> Result<(), AdcError> {

@@ -4,6 +4,7 @@
 use crate::input::DPad;
 use crate::input::DPadState;
 use crate::input::InputDPad;
+use crate::input::InputType;
 
 use embsys::crates::embassy_rp;
 use embsys::devices::buttons;
@@ -150,5 +151,18 @@ impl DPadDevice {
         }
 
         inputs
+    }
+
+    pub fn get_inputs_as_types(&mut self) -> [Option<InputType>; 4] {
+        let mut input_types: [Option<InputType>; 4] = [const { None }; 4];
+
+        let inputs: [Option<InputDPad>; 4] = self.get_inputs();
+        for (idx, dpad) in inputs.into_iter().enumerate() {
+            if let Some(dpad) = dpad {
+                input_types[idx] = Some(InputType::DPad(dpad));
+            }
+        }
+
+        input_types
     }
 }

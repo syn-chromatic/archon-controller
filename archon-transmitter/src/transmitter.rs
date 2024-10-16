@@ -2,7 +2,11 @@ use archon_core::consts::TCP_BUFFER;
 use archon_core::devices::dpad::DPadConfiguration;
 use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::dpad::DPadPins;
+use archon_core::devices::layout::DeviceLayout;
 use archon_core::endpoint::ArchonEndpoint;
+use archon_core::input::InputDPad;
+use archon_core::input::InputJoyStick;
+use archon_core::input::InputType;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_net;
@@ -11,6 +15,7 @@ use embsys::drivers;
 use embsys::exts::std;
 
 use std::time::Duration as StdDuration;
+use std::vec::Vec;
 
 use drivers::hardware::WIFIController;
 
@@ -24,6 +29,7 @@ use embassy_time::Duration;
 use embassy_time::TimeoutError;
 
 pub struct ArchonTransmitter {
+    layout: DeviceLayout,
     endpoint: ArchonEndpoint,
 }
 
@@ -61,23 +67,21 @@ impl ArchonTransmitter {
         result
     }
 
-    async fn send_input(&self, tcp: &mut TcpSocket<'_>) {
-        let bounce_interval: StdDuration = StdDuration::from_millis(20);
-        let repeat_interval: StdDuration = StdDuration::from_millis(100);
-        let repeat_hold: StdDuration = StdDuration::from_millis(500);
-
-        let dpad_pins: DPadPins = DPadPins::new(10, 11, 14, 15);
-        let dpad_conf: DPadConfiguration =
-            DPadConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
-        let mut dpad_device: DPadDevice = DPadDevice::new(&dpad_pins, &dpad_conf);
-
+    async fn send_inputs(&mut self, tcp: &mut TcpSocket<'_>) {
         loop {
-            let dpad_inputs = dpad_device.get_inputs();
-            for dpad_input in dpad_inputs {
-                if let Some(dpad_input) = dpad_input {
-                    let buffer = dpad_input.to_buffer();
-                    defmt::info!("BUFFER: {:?}", buffer);
-                    let _ = tcp.write(&buffer).await;
+            let inputs: Vec<InputType> = self.layout.get_inputs().await;
+            for input in inputs {
+                match input {
+                    InputType::DPad(input_dpad) => {
+                        let buffer = input_dpad.to_buffer();
+                        let _ = tcp.write(&buffer).await;
+                    }
+                    InputType::JoyStick(input_joystick) => {
+                        let buffer = input_joystick.to_buffer();
+                        let _ = tcp.write(&buffer).await;
+                    }
+                    InputType::ASCII(_input_ascii) => todo!(),
+                    InputType::Rotary(_input_rotary) => todo!(),
                 }
             }
         }
@@ -99,8 +103,8 @@ impl ArchonTransmitter {
 }
 
 impl ArchonTransmitter {
-    pub fn new(endpoint: ArchonEndpoint) -> Self {
-        Self { endpoint }
+    pub fn new(layout: DeviceLayout, endpoint: ArchonEndpoint) -> Self {
+        Self { layout, endpoint }
     }
 
     pub async fn run(&mut self) -> Result<(), AcceptError> {
@@ -109,7 +113,7 @@ impl ArchonTransmitter {
         let mut tcp: TcpSocket<'_> = Self::create_socket(&mut rx_buffer, &mut tx_buffer);
 
         self.accept_socket(&mut tcp).await?;
-        self.send_input(&mut tcp).await;
+        self.send_inputs(&mut tcp).await;
         let _ = self.flush_socket(&mut tcp).await;
         Ok(())
     }
