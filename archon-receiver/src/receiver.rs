@@ -33,6 +33,7 @@ use embassy_time::Duration;
 use embassy_time::Instant;
 use embassy_time::TimeoutError;
 
+// Better to provide a method to initialize this manually by the user
 static ARCHON: RwLock<ArchonReceiver> = RwLock::new(ArchonReceiver::new());
 
 pub struct ArchonReceiver {
