@@ -6,7 +6,6 @@ use crate::input::DPadState;
 use crate::input::InputDPad;
 use crate::input::InputType;
 
-use embsys::crates::defmt;
 use embsys::crates::embassy_rp;
 use embsys::devices::buttons;
 use embsys::drivers::hardware;
@@ -15,7 +14,6 @@ use embsys::exts::std;
 use std::time::Duration;
 
 use buttons::standard::AdvButton;
-use buttons::standard::Button;
 
 use hardware::get_pin;
 use hardware::InputGPIO;

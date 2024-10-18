@@ -89,7 +89,10 @@ impl ArchonTransmitter {
                             let _ = udp.send_to(&buffer, endpoint).await;
                         }
                         InputType::ASCII(_input_ascii) => todo!(),
-                        InputType::Rotary(_input_rotary) => todo!(),
+                        InputType::Rotary(input_rotary) => {
+                            let buffer = input_rotary.to_buffer();
+                            let _ = udp.send_to(&buffer, endpoint).await;
+                        }
                     }
                 }
             }

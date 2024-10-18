@@ -16,12 +16,18 @@ use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::joystick::JoyStickFilter;
 use archon_core::devices::layout::DeviceLayout;
 use archon_core::devices::polling::DevicePolling;
-use archon_core::endpoint::ArchonAddressIPv4;
+use archon_core::devices::rotary::RotaryAdc;
+use archon_core::devices::rotary::RotaryConfiguration;
+use archon_core::devices::rotary::RotaryDevice;
+use archon_core::devices::rotary::RotaryFilter;
+use archon_core::discovery::DiscoveryInformation;
+use archon_core::discovery::MultiCastDiscovery;
 use archon_core::endpoint::ArchonEndpoint;
 
 use embsys::crates::cortex_m_rt;
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
+use embsys::crates::embassy_net;
 use embsys::crates::embassy_time;
 use embsys::drivers::hardware::HWController;
 use embsys::drivers::hardware::WIFIController;
@@ -31,9 +37,11 @@ use embsys::setup::SysInit;
 
 use std::sync::Mutex;
 use std::time::Duration as StdDuration;
+use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
+use embassy_net::udp::BindError;
 use embassy_time::Duration;
 
 use helpers::task_handler::Task;
@@ -68,11 +76,28 @@ async fn create_joystick_device() -> JoyStickDevice {
     joystick_device
 }
 
+async fn create_rotary_device() -> RotaryDevice {
+    let v_pin = HWController::pac().PIN_28;
+    let rotary_adc: RotaryAdc = RotaryAdc::new(v_pin);
+
+    let rotary_filter: RotaryFilter = RotaryFilter::ema(5);
+    let rotary_polling: DevicePolling = DevicePolling::new(Duration::from_millis(10));
+
+    let rotary_conf: RotaryConfiguration = RotaryConfiguration::new(rotary_filter, rotary_polling);
+
+    let mut rotary_device: RotaryDevice = RotaryDevice::new(rotary_adc, rotary_conf);
+    let _ = rotary_device.calibrate_center(5000).await;
+
+    rotary_device
+}
+
 async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
     let dpad_device: DPadDevice = create_dpad_device();
     let joystick_device: JoyStickDevice = create_joystick_device().await;
+    let rotary_device: RotaryDevice = create_rotary_device().await;
     layout.lock().add_dpad(dpad_device);
     layout.lock().add_joystick(joystick_device);
+    layout.lock().add_rotary(rotary_device);
 }
 
 #[embassy_executor::main]
@@ -105,17 +130,24 @@ async fn entry(spawner: Spawner) {
 
     WIFIController::control_mut().gpio_set(0, true).await;
 
-    let endpoint: ArchonEndpoint =
-        ArchonEndpoint::new(ArchonAddressIPv4::new(192, 168, 2, 132), 9688);
-    ArchonTransmitter::read_lock().set_endpoint(endpoint);
+    let discovery = MultiCastDiscovery::new();
+    let _ = discovery.join().await;
+    let result: Result<Vec<DiscoveryInformation>, BindError> = discovery.discover().await;
 
-    set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
+    if let Ok(discovered) = result {
+        let info: &DiscoveryInformation = discovered.first().unwrap();
+        let endpoint: ArchonEndpoint = info.endpoint();
 
-    defmt::info!("Archon Collecting..");
-    let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
-    let _ = archon_collect_task.start();
+        ArchonTransmitter::read_lock().set_endpoint(endpoint);
 
-    defmt::info!("Archon Sending..");
-    let archon_send_task: Task = Task::new(send_spawner, archon_send);
-    let _ = archon_send_task.start();
+        set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
+
+        defmt::info!("Archon Collecting..");
+        let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
+        let _ = archon_collect_task.start();
+
+        defmt::info!("Archon Sending..");
+        let archon_send_task: Task = Task::new(send_spawner, archon_send);
+        let _ = archon_send_task.start();
+    }
 }
