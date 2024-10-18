@@ -20,6 +20,7 @@ use embassy_net::udp::SendError;
 use embassy_net::udp::UdpSocket;
 use embassy_net::IpAddress;
 use embassy_net::IpEndpoint;
+use embassy_net::IpListenEndpoint;
 
 use embassy_net::MulticastError;
 
@@ -162,7 +163,10 @@ impl MultiCastDiscovery {
         }
     }
 
-    pub async fn announce(&self, info: &AnnounceInformation) -> Result<(), SendError> {
+    pub async fn announce(
+        &self,
+        info: &AnnounceInformation,
+    ) -> Result<IpListenEndpoint, SendError> {
         let mut rx_meta: [PacketMetadata; MC_BUFFER] = [PacketMetadata::EMPTY; MC_BUFFER];
         let mut rx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
         let mut tx_meta: [PacketMetadata; MC_BUFFER] = [PacketMetadata::EMPTY; MC_BUFFER];
@@ -176,13 +180,17 @@ impl MultiCastDiscovery {
             &mut tx_buffer,
         );
 
-        let endpoint: IpEndpoint = IpEndpoint::new(IpAddress::v4(0, 0, 0, 0), 5000);
+        let endpoint: IpEndpoint = IpEndpoint::new(IpAddress::v4(0, 0, 0, 0), 0);
         let _ = udp.bind(endpoint);
 
         let buffer = info.to_buffer();
-        let endpoint: IpEndpoint = IpEndpoint::new(self.multicast_addr, 5000);
-        udp.send_to(&buffer, endpoint).await?;
-
-        Ok(())
+        loop {
+            let endpoint: IpEndpoint = IpEndpoint::new(self.multicast_addr, 5000);
+            let result: Result<(), SendError> = udp.send_to(&buffer, endpoint).await;
+            if let Ok(_) = result {
+                let addr: IpListenEndpoint = udp.endpoint();
+                return Ok(addr);
+            }
+        }
     }
 }
