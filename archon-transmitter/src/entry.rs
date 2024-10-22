@@ -21,13 +21,13 @@ use archon_core::devices::rotary::RotaryConfiguration;
 use archon_core::devices::rotary::RotaryDevice;
 use archon_core::devices::rotary::RotaryFilter;
 use archon_core::discovery::DiscoveryInformation;
+use archon_core::discovery::DiscoveryStatus;
 use archon_core::discovery::MultiCastDiscovery;
 use archon_core::endpoint::ArchonEndpoint;
 
 use embsys::crates::cortex_m_rt;
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
-use embsys::crates::embassy_net;
 use embsys::crates::embassy_time;
 use embsys::drivers::hardware::HWController;
 use embsys::drivers::hardware::WIFIController;
@@ -37,11 +37,9 @@ use embsys::setup::SysInit;
 
 use std::sync::Mutex;
 use std::time::Duration as StdDuration;
-use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
-use embassy_net::udp::BindError;
 use embassy_time::Duration;
 
 use helpers::task_handler::Task;
@@ -100,6 +98,20 @@ async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
     layout.lock().add_rotary(rotary_device);
 }
 
+async fn get_discovery_information(status: &DiscoveryStatus) -> DiscoveryInformation {
+    loop {
+        let state = status.state();
+        let discovered = status.discovered();
+
+        defmt::info!("State: {:?} | Discovered: {:?}", state, discovered);
+        if !discovered.is_empty() {
+            return discovered.first().unwrap().clone();
+        }
+
+        embassy_time::Timer::after_millis(500).await;
+    }
+}
+
 #[embassy_executor::main]
 async fn entry(spawner: Spawner) {
     defmt::info!("Initializing System..");
@@ -130,24 +142,22 @@ async fn entry(spawner: Spawner) {
 
     WIFIController::control_mut().gpio_set(0, true).await;
 
-    let discovery = MultiCastDiscovery::new();
+    let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
     let _ = discovery.join().await;
-    let result: Result<Vec<DiscoveryInformation>, BindError> = discovery.discover().await;
+    let status: &DiscoveryStatus = discovery.start_discovery(&send_spawner).await.unwrap();
+    let disc_info: DiscoveryInformation = get_discovery_information(status).await;
 
-    if let Ok(discovered) = result {
-        let info: &DiscoveryInformation = discovered.first().unwrap();
-        let endpoint: ArchonEndpoint = info.endpoint();
+    let endpoint: ArchonEndpoint = disc_info.endpoint();
 
-        ArchonTransmitter::read_lock().set_endpoint(endpoint);
+    ArchonTransmitter::read_lock().set_endpoint(endpoint);
 
-        set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
+    set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
 
-        defmt::info!("Archon Collecting..");
-        let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
-        let _ = archon_collect_task.start();
+    defmt::info!("Archon Collecting..");
+    let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
+    let _ = archon_collect_task.start();
 
-        defmt::info!("Archon Sending..");
-        let archon_send_task: Task = Task::new(send_spawner, archon_send);
-        let _ = archon_send_task.start();
-    }
+    defmt::info!("Archon Sending..");
+    let archon_send_task: Task = Task::new(send_spawner, archon_send);
+    let _ = archon_send_task.start();
 }

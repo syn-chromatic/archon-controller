@@ -7,13 +7,12 @@
 #![feature(trait_alias)]
 #![feature(impl_trait_in_assoc_type)]
 
-
-pub mod input;
 pub mod consts;
+pub mod devices;
+pub mod diagnostics;
+pub mod discovery;
+pub mod endpoint;
+pub mod input;
 pub mod ring;
 pub mod status;
-pub mod endpoint;
-pub mod diagnostics;
 pub mod utils;
-pub mod devices;
-pub mod discovery;
