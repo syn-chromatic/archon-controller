@@ -43,6 +43,15 @@
                 "isDefault": true
             }
         },
+        {
+            "type": "shell",
+            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/debug/archon-transmitter",
+            "label": "rust: attach debug",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        }
     ],
     "inputs": [
         {
