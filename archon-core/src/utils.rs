@@ -1,4 +1,5 @@
 use num::cast::AsPrimitive;
+use num::traits::float::FloatCore;
 use num::NumCast;
 use num::Unsigned;
 
@@ -23,6 +24,30 @@ pub fn u8_to_bool(value: u8) -> bool {
         return false;
     }
     panic!("u8 value is not a boolean: {}", value);
+}
+
+pub struct LinearInterpolationU12 {
+    min_val: u16,
+    max_val: u16,
+}
+
+impl LinearInterpolationU12 {
+    pub fn new(min_val: u16, max_val: u16) -> Self {
+        Self { min_val, max_val }
+    }
+
+    pub fn interpolate(&self, val: u16) -> u16 {
+        if val < self.min_val {
+            return 0;
+        }
+
+        if val > self.max_val {
+            return 4095;
+        }
+
+        let intr_val: u16 = (val - self.min_val) * (4095 / (self.max_val - self.min_val));
+        intr_val
+    }
 }
 
 /// Exponential Moving Average
@@ -51,9 +76,9 @@ where
 
     pub fn update(&mut self, value: T) -> T {
         if let Some(ema) = self.ema {
-            let ema_f32: f32 = self.alpha * value.as_() + (1.0 - self.alpha) * ema.as_();
+            let ema_f32: f32 = (self.alpha * value.as_()) + ((1.0 - self.alpha) * ema.as_());
+            let ema_f32: f32 = ema_f32.round();
             let ema: T = T::from(ema_f32).expect("Conversion failed");
-
             self.ema = Some(ema);
             return ema;
         }
