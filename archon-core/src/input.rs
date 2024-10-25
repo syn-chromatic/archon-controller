@@ -26,6 +26,8 @@ pub enum InputType {
     ASCII(InputASCII) = 2,
     /// 2-byte — [2-byte ADC]
     Rotary(InputRotary) = 3,
+    /// 5-byte — [1-byte STATE] — [4-byte PRESS DURATION]
+    Button(InputButton) = 4,
 }
 
 impl InputType {
@@ -39,6 +41,7 @@ impl InputType {
             1 => InputType::JoyStick(InputJoyStick::from_buffer(buffer)),
             2 => InputType::ASCII(InputASCII::from_buffer(buffer)),
             3 => InputType::Rotary(InputRotary::from_buffer(buffer)),
+            4 => InputType::Button(InputButton::from_buffer(buffer)),
             _ => panic!("Unsupported InputType: {}", { type_id }),
         }
     }
@@ -46,24 +49,29 @@ impl InputType {
     pub fn defmt(&self) {
         match &self {
             InputType::DPad(dpad) => {
-                let id = dpad.id();
-                let dpad_v = dpad.dpad().as_u8();
+                let id: u8 = dpad.id();
+                let dpad_v: u8 = dpad.dpad().as_u8();
                 defmt::info!("ID: {:?} | DPAD: {:?} ", id, dpad_v,);
             }
             InputType::JoyStick(joystick) => {
-                let id = joystick.id();
-                let xy = joystick.xy();
+                let id: u8 = joystick.id();
+                let xy: (u16, u16) = joystick.xy();
                 defmt::info!("ID: {:?} | XY: {:?}", id, xy,);
             }
             InputType::ASCII(input_ascii) => {
-                let id = input_ascii.id();
-                let c = input_ascii.char();
+                let id: u8 = input_ascii.id();
+                let c: char = input_ascii.char();
                 defmt::info!("ID: {:?} | ASCII: {:?}", id, c,);
             }
             InputType::Rotary(rotary) => {
-                let id = rotary.id();
-                let rotary_v = rotary.value();
+                let id: u8 = rotary.id();
+                let rotary_v: u16 = rotary.value();
                 defmt::info!("ID: {:?} | Rotary: {:?} ", id, rotary_v,);
+            }
+            InputType::Button(button) => {
+                let id: u8 = button.id();
+                let pressed: bool = button.state().pressed;
+                defmt::info!("ID: {:?} | BUTTON: {:?} ", id, pressed);
             }
         }
     }
@@ -97,12 +105,12 @@ impl DPad {
     }
 }
 
-pub struct DPadState {
+pub struct ButtonState {
     pressed: bool,
     duration: u16,
 }
 
-impl DPadState {
+impl ButtonState {
     pub fn new(pressed: bool, duration: u16) -> Self {
         Self { pressed, duration }
     }
@@ -132,11 +140,11 @@ impl DPadState {
 pub struct InputDPad {
     id: u8,
     dpad: DPad,
-    state: DPadState,
+    state: ButtonState,
 }
 
 impl InputDPad {
-    pub fn new(id: u8, dpad: DPad, state: DPadState) -> Self {
+    pub fn new(id: u8, dpad: DPad, state: ButtonState) -> Self {
         Self { id, dpad, state }
     }
 
@@ -157,13 +165,13 @@ impl InputDPad {
         };
 
         let pressed: &u8 = &buffer[4];
-        let pressed: bool = u8_to_bool(*value);
+        let pressed: bool = u8_to_bool(*pressed);
 
         let duration: &[u8] = &buffer[5..=6];
         let duration: [u8; 2] = duration.try_into().unwrap();
         let duration: u16 = u16::from_be_bytes(duration);
 
-        let state: DPadState = DPadState { pressed, duration };
+        let state: ButtonState = ButtonState { pressed, duration };
         Self { id, dpad, state }
     }
 
@@ -193,7 +201,7 @@ impl InputDPad {
         &self.dpad
     }
 
-    pub fn state(&self) -> &DPadState {
+    pub fn state(&self) -> &ButtonState {
         &self.state
     }
 }
@@ -346,5 +354,58 @@ impl InputRotary {
 
     pub fn value(&self) -> u16 {
         self.value
+    }
+}
+
+pub struct InputButton {
+    id: u8,
+    state: ButtonState,
+}
+
+impl InputButton {
+    pub fn new(id: u8, state: ButtonState) -> Self {
+        Self { id, state }
+    }
+
+    pub fn as_type(self) -> InputType {
+        InputType::Button(self)
+    }
+
+    pub fn from_buffer(buffer: &[u8; UDP_BUFFER]) -> Self {
+        let id: u8 = *&buffer[0];
+
+        let pressed: &u8 = &buffer[3];
+        let pressed: bool = u8_to_bool(*pressed);
+
+        let duration: &[u8] = &buffer[4..=5];
+        let duration: [u8; 2] = duration.try_into().unwrap();
+        let duration: u16 = u16::from_be_bytes(duration);
+
+        let state: ButtonState = ButtonState { pressed, duration };
+        Self { id, state }
+    }
+
+    pub fn to_buffer(&self) -> [u8; UDP_BUFFER] {
+        let id_be: u8 = self.id.to_be();
+        let type_be: [u8; 2] = [0x00, 0x00];
+        let pressed: u8 = self.state.pressed.into();
+        let duration: u16 = self.state.duration.to_be();
+        let duration: [u8; 2] = split_u16(duration);
+
+        let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
+        buffer[0] = id_be;
+        buffer[1..=2].copy_from_slice(&type_be);
+        buffer[3] = pressed;
+        buffer[4..=5].copy_from_slice(&duration);
+
+        buffer
+    }
+
+    pub fn id(&self) -> u8 {
+        self.id
+    }
+
+    pub fn state(&self) -> &ButtonState {
+        &self.state
     }
 }

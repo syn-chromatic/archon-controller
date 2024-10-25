@@ -1,3 +1,4 @@
+pub mod button;
 pub mod dpad;
 pub mod joystick;
 pub mod layout;

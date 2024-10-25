@@ -93,6 +93,10 @@ impl ArchonTransmitter {
                             let buffer = input_rotary.to_buffer();
                             let _ = udp.send_to(&buffer, endpoint).await;
                         }
+                        InputType::Button(input_button) => {
+                            let buffer = input_button.to_buffer();
+                            let _ = udp.send_to(&buffer, endpoint).await;
+                        }
                     }
                 }
             }

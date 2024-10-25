@@ -101,3 +101,5 @@ pub async fn rotary_test() {
         }
     }
 }
+
+pub async fn button_test() {}

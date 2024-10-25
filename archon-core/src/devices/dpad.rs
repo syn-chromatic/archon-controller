@@ -2,7 +2,7 @@
 #![allow(unused_variables)]
 
 use crate::input::DPad;
-use crate::input::DPadState;
+use crate::input::ButtonState;
 use crate::input::InputDPad;
 use crate::input::InputType;
 
@@ -191,25 +191,25 @@ impl DPadDevice {
         let mut inputs: [Option<InputDPad>; 4] = [const { None }; 4];
 
         if self.buttons.up.is_pressed() {
-            let state: DPadState = DPadState::from_adv_button(&mut self.buttons.up);
+            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.up);
             let dpad: InputDPad = InputDPad::new(0, DPad::Up, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.right.is_pressed() {
-            let state: DPadState = DPadState::from_adv_button(&mut self.buttons.right);
+            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.right);
             let dpad: InputDPad = InputDPad::new(0, DPad::Right, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.down.is_pressed() {
-            let state: DPadState = DPadState::from_adv_button(&mut self.buttons.down);
+            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.down);
             let dpad: InputDPad = InputDPad::new(0, DPad::Down, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.left.is_pressed() {
-            let state: DPadState = DPadState::from_adv_button(&mut self.buttons.left);
+            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.left);
             let dpad: InputDPad = InputDPad::new(0, DPad::Left, state);
             inputs[0] = Some(dpad);
         }
