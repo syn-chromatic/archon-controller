@@ -17,6 +17,7 @@ use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::layout::DeviceLayout;
 use archon_core::devices::rotary::RotaryDevice;
+use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
 use archon_core::discovery::EstablishInformation;
 use archon_core::discovery::MultiCastDiscovery;
@@ -34,6 +35,7 @@ use embsys::setup::SysInit;
 
 use non_std::error::net::TCPError;
 use std::sync::Mutex;
+use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
@@ -59,8 +61,8 @@ async fn get_establish_information(
     status: &DiscoveryStatus,
 ) -> EstablishInformation {
     loop {
-        let state = status.state();
-        let discovered = status.discovered();
+        let state: bool = status.state();
+        let discovered: Vec<DiscoveryInformation> = status.discovered();
 
         defmt::info!("State: {:?} | Discovered: {:?}", state, discovered);
         if !discovered.is_empty() {
