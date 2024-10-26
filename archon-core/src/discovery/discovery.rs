@@ -8,7 +8,6 @@ use super::structures::EstablishInformation;
 
 use crate::consts::MC_BUFFER;
 
-use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_net;
 use embsys::crates::embassy_time;
@@ -16,6 +15,7 @@ use embsys::drivers::hardware;
 use embsys::exts::non_std;
 use embsys::exts::std;
 
+use non_std::error::net::TCPError;
 use non_std::future::with_cancel;
 use std::time::Duration;
 
@@ -23,7 +23,6 @@ use embassy_executor::SendSpawner;
 use embassy_executor::SpawnError;
 use embassy_time::Timer;
 
-use embassy_net::tcp::AcceptError;
 use embassy_net::tcp::ConnectError;
 use embassy_net::tcp::Error;
 use embassy_net::tcp::TcpSocket;
@@ -35,15 +34,7 @@ use embassy_net::IpEndpoint;
 use embassy_net::IpListenEndpoint;
 use embassy_net::MulticastError;
 
-use defmt::Format;
 use hardware::WIFIController;
-
-#[derive(Format)]
-pub enum TCPError {
-    Error(Error),
-    ConnectError(ConnectError),
-    AcceptError(AcceptError),
-}
 
 pub struct MultiCastDiscovery {
     multicast_addr: IpAddress,

@@ -27,10 +27,12 @@ use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_time;
 use embsys::drivers::hardware::WIFIController;
+use embsys::exts::non_std;
 use embsys::exts::std;
 use embsys::helpers;
 use embsys::setup::SysInit;
 
+use non_std::error::net::TCPError;
 use std::sync::Mutex;
 
 use embassy_executor::SendSpawner;
@@ -52,7 +54,7 @@ async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
     layout.lock().add_button(l1_button_device);
 }
 
-async fn get_discovery_information(
+async fn get_establish_information(
     discovery: &MultiCastDiscovery,
     status: &DiscoveryStatus,
 ) -> EstablishInformation {
@@ -62,12 +64,14 @@ async fn get_discovery_information(
 
         defmt::info!("State: {:?} | Discovered: {:?}", state, discovered);
         if !discovered.is_empty() {
-            let info = discovered.last().unwrap().clone();
-            let establish = discovery.connect(&info).await;
-            if let Ok(establish) = establish {
-                return establish;
-            } else if let Err(error) = establish {
-                defmt::info!("Error -> {:?}", error);
+            if let Some(info) = discovered.last().cloned() {
+                let establish: Result<EstablishInformation, TCPError> =
+                    discovery.connect(&info).await;
+                if let Ok(establish) = establish {
+                    return establish;
+                } else if let Err(error) = establish {
+                    defmt::info!("Error -> {:?}", error);
+                }
             }
         }
 
@@ -111,7 +115,7 @@ async fn entry(spawner: Spawner) {
     let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
     let _ = discovery.join().await;
     let status: &DiscoveryStatus = discovery.start_discovery(&send_spawner).await.unwrap();
-    let establish: EstablishInformation = get_discovery_information(&discovery, status).await;
+    let establish: EstablishInformation = get_establish_information(&discovery, status).await;
     discovery.stop_discovery().await;
 
     let endpoint: ArchonEndpoint = establish.archon_endpoint();
