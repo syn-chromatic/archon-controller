@@ -159,6 +159,7 @@ impl JoyStickState {
 }
 
 pub struct JoyStickDevice {
+    id: u8,
     adc: JoyStickAdc,
     conf: JoyStickConfiguration,
 }
@@ -194,8 +195,8 @@ impl JoyStickDevice {
 }
 
 impl JoyStickDevice {
-    pub fn new(adc: JoyStickAdc, conf: JoyStickConfiguration) -> Self {
-        Self { adc, conf }
+    pub fn new(id: u8, adc: JoyStickAdc, conf: JoyStickConfiguration) -> Self {
+        Self { id, adc, conf }
     }
 
     pub async fn get_input(&mut self) -> Result<Option<InputJoyStick>, AdcError> {
@@ -208,7 +209,7 @@ impl JoyStickDevice {
         let (x, y) = self.conf.center.get_centered(x, y);
 
         if self.conf.polling.poll() {
-            let joystick: InputJoyStick = InputJoyStick::new(0, x, y);
+            let joystick: InputJoyStick = InputJoyStick::new(self.id, x, y);
             return Ok(Some(joystick));
         }
 

@@ -2,16 +2,10 @@
 #![allow(unused_variables)]
 
 use crate::consts::UDP_BUFFER;
-use crate::devices::dpad::DPadButton;
 use crate::utils::split_u16;
-use crate::utils::u128_to_u16_max;
 use crate::utils::u8_to_bool;
 
 use embsys::crates::defmt;
-use embsys::devices::buttons;
-
-use buttons::standard::AdvButton;
-use buttons::standard::Button;
 
 // DATA REPRESENTATION
 // [1-byte ID, 2-byte Type ID, X-byte Input Data]
@@ -115,25 +109,12 @@ impl ButtonState {
         Self { pressed, duration }
     }
 
-    pub fn from_adv_button(button: &mut AdvButton) -> Self {
-        let pressed: bool = button.is_pressed();
-        let duration: u128 = button.hold_duration_as_millis();
-        let duration: u16 = u128_to_u16_max(duration);
-        Self { pressed, duration }
+    pub fn pressed(&self) -> bool {
+        self.pressed
     }
 
-    pub fn from_button(button: &mut Button) -> Self {
-        let pressed: bool = button.is_pressed();
-        let duration: u128 = 0;
-        let duration: u16 = u128_to_u16_max(duration);
-        Self { pressed, duration }
-    }
-
-    pub fn from_dpad_button(button: &mut DPadButton) -> Self {
-        let pressed: bool = button.is_pressed();
-        let duration: u128 = 0;
-        let duration: u16 = u128_to_u16_max(duration);
-        Self { pressed, duration }
+    pub fn duration(&self) -> u16 {
+        self.duration
     }
 }
 

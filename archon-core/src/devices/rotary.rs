@@ -68,6 +68,7 @@ impl RotaryConfiguration {
 }
 
 pub struct RotaryDevice {
+    id: u8,
     adc: RotaryAdc,
     conf: RotaryConfiguration,
 }
@@ -89,8 +90,8 @@ impl RotaryDevice {
 }
 
 impl RotaryDevice {
-    pub fn new(adc: RotaryAdc, conf: RotaryConfiguration) -> Self {
-        Self { adc, conf }
+    pub fn new(id: u8, adc: RotaryAdc, conf: RotaryConfiguration) -> Self {
+        Self { id, adc, conf }
     }
 
     pub async fn get_input(&mut self) -> Result<Option<InputRotary>, AdcError> {
@@ -100,7 +101,7 @@ impl RotaryDevice {
         let v: u16 = ((v as f32 / 4095.0) * 10_000.0) as u16;
 
         if self.conf.polling.poll() {
-            let rotary: InputRotary = InputRotary::new(0, v);
+            let rotary: InputRotary = InputRotary::new(self.id, v);
             return Ok(Some(rotary));
         }
 

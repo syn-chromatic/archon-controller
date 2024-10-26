@@ -1,17 +1,18 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use crate::input::DPad;
 use crate::input::ButtonState;
+use crate::input::DPad;
 use crate::input::InputDPad;
 use crate::input::InputType;
 
 use embsys::crates::embassy_rp;
+use embsys::crates::embassy_time;
 use embsys::devices::buttons;
 use embsys::drivers::hardware;
 use embsys::exts::std;
 
-use std::time::Duration;
+use std::time::Duration as StdDuration;
 
 use buttons::standard::AdvButton;
 
@@ -22,6 +23,8 @@ use hardware::InputTrait;
 use embassy_rp::gpio::AnyPin;
 use embassy_rp::gpio::Pin;
 use embassy_rp::gpio::Pull;
+use embassy_time::Duration;
+use embassy_time::Instant;
 
 pub struct DPadButton {
     vpin: u8,
@@ -75,16 +78,16 @@ impl DPadPins {
 
 #[derive(Copy, Clone)]
 pub struct DPadConfiguration {
-    bounce_interval: Duration,
-    repeat_interval: Duration,
-    repeat_hold: Duration,
+    bounce_interval: StdDuration,
+    repeat_interval: StdDuration,
+    repeat_hold: StdDuration,
 }
 
 impl DPadConfiguration {
     pub fn new(
-        bounce_interval: Duration,
-        repeat_interval: Duration,
-        repeat_hold: Duration,
+        bounce_interval: StdDuration,
+        repeat_interval: StdDuration,
+        repeat_hold: StdDuration,
     ) -> Self {
         Self {
             bounce_interval,
@@ -99,6 +102,80 @@ pub struct DPadButtons {
     right: AdvButton,
     down: AdvButton,
     left: AdvButton,
+    up_press: Option<Instant>,
+    right_press: Option<Instant>,
+    down_press: Option<Instant>,
+    left_press: Option<Instant>,
+}
+
+impl DPadButtons {
+    fn up_press_duration(&mut self) -> Duration {
+        if let Some(press) = self.up_press {
+            return press.elapsed();
+        } else {
+            let press: Instant = Instant::now();
+            let elapsed: Duration = press.elapsed();
+            self.up_press = Some(press);
+            return elapsed;
+        }
+    }
+
+    fn right_press_duration(&mut self) -> Duration {
+        if let Some(press) = self.right_press {
+            return press.elapsed();
+        } else {
+            let press: Instant = Instant::now();
+            let elapsed: Duration = press.elapsed();
+            self.right_press = Some(press);
+            return elapsed;
+        }
+    }
+
+    fn down_press_duration(&mut self) -> Duration {
+        if let Some(press) = self.down_press {
+            return press.elapsed();
+        } else {
+            let press: Instant = Instant::now();
+            let elapsed: Duration = press.elapsed();
+            self.down_press = Some(press);
+            return elapsed;
+        }
+    }
+
+    fn left_press_duration(&mut self) -> Duration {
+        if let Some(press) = self.left_press {
+            return press.elapsed();
+        } else {
+            let press: Instant = Instant::now();
+            let elapsed: Duration = press.elapsed();
+            self.left_press = Some(press);
+            return elapsed;
+        }
+    }
+
+    fn up_press_reset(&mut self) {
+        if !self.up.on_hold() || !self.up.on_repeat() {
+            self.up_press = None;
+        }
+    }
+
+    fn right_press_reset(&mut self) {
+        if !self.right.on_hold() || !self.right.on_repeat() {
+            self.right_press = None;
+        }
+    }
+
+    fn down_press_reset(&mut self) {
+        if !self.down.on_hold() || !self.down.on_repeat() {
+            self.down_press = None;
+        }
+    }
+
+    fn left_press_reset(&mut self) {
+        if !self.left.on_hold() || !self.left.on_repeat() {
+            self.left_press = None;
+        }
+    }
 }
 
 impl DPadButtons {
@@ -138,49 +215,27 @@ impl DPadButtons {
             right,
             down,
             left,
+            up_press: None,
+            right_press: None,
+            down_press: None,
+            left_press: None,
         }
     }
 }
 
-// pub struct DPadButtons {
-//     up: DPadButton,
-//     right: DPadButton,
-//     down: DPadButton,
-//     left: DPadButton,
-// }
-
-// impl DPadButtons {
-//     pub fn new(pins: &DPadPins, conf: &DPadConfiguration) -> Self {
-//         let up_pin: AnyPin = get_pin(pins.up);
-//         let right_pin: AnyPin = get_pin(pins.right);
-//         let down_pin: AnyPin = get_pin(pins.down);
-//         let left_pin: AnyPin = get_pin(pins.left);
-
-//         let up: DPadButton = DPadButton::new(up_pin);
-//         let right: DPadButton = DPadButton::new(right_pin);
-//         let down: DPadButton = DPadButton::new(down_pin);
-//         let left: DPadButton = DPadButton::new(left_pin);
-
-//         Self {
-//             up,
-//             right,
-//             down,
-//             left,
-//         }
-//     }
-// }
-
 pub struct DPadDevice {
+    id: u8,
     pins: DPadPins,
     conf: DPadConfiguration,
     buttons: DPadButtons,
 }
 
 impl DPadDevice {
-    pub fn new(pins: &DPadPins, conf: &DPadConfiguration) -> Self {
+    pub fn new(id: u8, pins: &DPadPins, conf: &DPadConfiguration) -> Self {
         let buttons: DPadButtons = DPadButtons::new(pins, conf);
 
         Self {
+            id,
             pins: *pins,
             conf: *conf,
             buttons,
@@ -191,28 +246,37 @@ impl DPadDevice {
         let mut inputs: [Option<InputDPad>; 4] = [const { None }; 4];
 
         if self.buttons.up.is_pressed() {
-            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.up);
-            let dpad: InputDPad = InputDPad::new(0, DPad::Up, state);
+            let duration: u16 = self.buttons.up_press_duration().as_millis() as u16;
+            let state: ButtonState = ButtonState::new(true, duration);
+            let dpad: InputDPad = InputDPad::new(self.id, DPad::Up, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.right.is_pressed() {
-            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.right);
-            let dpad: InputDPad = InputDPad::new(0, DPad::Right, state);
+            let duration: u16 = self.buttons.right_press_duration().as_millis() as u16;
+            let state: ButtonState = ButtonState::new(true, duration);
+            let dpad: InputDPad = InputDPad::new(self.id, DPad::Right, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.down.is_pressed() {
-            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.down);
-            let dpad: InputDPad = InputDPad::new(0, DPad::Down, state);
+            let duration: u16 = self.buttons.down_press_duration().as_millis() as u16;
+            let state: ButtonState = ButtonState::new(true, duration);
+            let dpad: InputDPad = InputDPad::new(self.id, DPad::Down, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.left.is_pressed() {
-            let state: ButtonState = ButtonState::from_adv_button(&mut self.buttons.left);
-            let dpad: InputDPad = InputDPad::new(0, DPad::Left, state);
+            let duration: u16 = self.buttons.left_press_duration().as_millis() as u16;
+            let state: ButtonState = ButtonState::new(true, duration);
+            let dpad: InputDPad = InputDPad::new(self.id, DPad::Left, state);
             inputs[0] = Some(dpad);
         }
+
+        self.buttons.up_press_reset();
+        self.buttons.right_press_reset();
+        self.buttons.down_press_reset();
+        self.buttons.left_press_reset();
 
         inputs
     }

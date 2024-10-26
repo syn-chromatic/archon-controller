@@ -6,6 +6,8 @@ use crate::tasks::archon_send;
 use crate::tasks::wifi_connect_static;
 use crate::transmitter::ArchonTransmitter;
 
+use archon_core::devices::button::ButtonConfiguration;
+use archon_core::devices::button::ButtonDevice;
 use archon_core::devices::dpad::DPadConfiguration;
 use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::dpad::DPadPins;
@@ -52,7 +54,7 @@ fn create_dpad_device() -> DPadDevice {
     let dpad_pins: DPadPins = DPadPins::new(10, 11, 15, 14);
     let dpad_conf: DPadConfiguration =
         DPadConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
-    let dpad_device: DPadDevice = DPadDevice::new(&dpad_pins, &dpad_conf);
+    let dpad_device: DPadDevice = DPadDevice::new(0, &dpad_pins, &dpad_conf);
     dpad_device
 }
 
@@ -69,10 +71,32 @@ async fn create_joystick_device() -> JoyStickDevice {
     let ema_filter: JoyStickFilter = JoyStickFilter::ema(20);
     joystick_conf.add_filter(ema_filter);
 
-    let mut joystick_device: JoyStickDevice = JoyStickDevice::new(joystick_adc, joystick_conf);
+    let mut joystick_device: JoyStickDevice = JoyStickDevice::new(0, joystick_adc, joystick_conf);
     let _ = joystick_device.calibrate_center(5000).await;
 
     joystick_device
+}
+
+fn create_joystick_button_device() -> ButtonDevice {
+    let bounce_interval: StdDuration = StdDuration::from_millis(10);
+    let repeat_interval: StdDuration = StdDuration::from_millis(100);
+    let repeat_hold: StdDuration = StdDuration::from_millis(500);
+    let button_conf: ButtonConfiguration =
+        ButtonConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
+
+    let button_device: ButtonDevice = ButtonDevice::new(0, 22, &button_conf);
+    button_device
+}
+
+fn create_l1_button_device() -> ButtonDevice {
+    let bounce_interval: StdDuration = StdDuration::from_millis(10);
+    let repeat_interval: StdDuration = StdDuration::from_millis(100);
+    let repeat_hold: StdDuration = StdDuration::from_millis(500);
+    let button_conf: ButtonConfiguration =
+        ButtonConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
+
+    let button_device: ButtonDevice = ButtonDevice::new(1, 12, &button_conf);
+    button_device
 }
 
 async fn create_rotary_device() -> RotaryDevice {
@@ -87,17 +111,22 @@ async fn create_rotary_device() -> RotaryDevice {
     rotary_conf.add_filter(interpolation_filter);
     rotary_conf.add_filter(ema_filter);
 
-    let rotary_device: RotaryDevice = RotaryDevice::new(rotary_adc, rotary_conf);
+    let rotary_device: RotaryDevice = RotaryDevice::new(0, rotary_adc, rotary_conf);
     rotary_device
 }
 
 async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
     let dpad_device: DPadDevice = create_dpad_device();
     let joystick_device: JoyStickDevice = create_joystick_device().await;
+    let joystick_button_device: ButtonDevice = create_joystick_button_device();
     let rotary_device: RotaryDevice = create_rotary_device().await;
+    let l1_button_device: ButtonDevice = create_l1_button_device();
+
     layout.lock().add_dpad(dpad_device);
     layout.lock().add_joystick(joystick_device);
+    layout.lock().add_button(joystick_button_device);
     layout.lock().add_rotary(rotary_device);
+    layout.lock().add_button(l1_button_device);
 }
 
 async fn get_discovery_information(status: &DiscoveryStatus) -> DiscoveryInformation {
@@ -125,8 +154,10 @@ async fn entry(spawner: Spawner) {
     WIFIController::control_mut().gpio_set(0, true).await;
 
     // tests::joystick_test().await;
-    tests::rotary_test().await;
+    // tests::rotary_test().await;
     // tests::dpad_test();
+    // tests::button_test().await;
+    tests::test_device_layout().await;
 
     // let send_spawner: SendSpawner = spawner.make_send();
     // let wifi_task: Task = Task::new(send_spawner, wifi_connect_static);
