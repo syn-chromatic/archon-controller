@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use archon_core::devices::button::ButtonDevice;
 use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::joystick::JoyStickDevice;

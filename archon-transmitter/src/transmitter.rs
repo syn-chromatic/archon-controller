@@ -1,20 +1,14 @@
 use crate::consts::INPUT_BUFFER;
 
 use archon_core::consts::UDP_BUFFER;
-use archon_core::devices::dpad::DPadConfiguration;
-use archon_core::devices::dpad::DPadDevice;
-use archon_core::devices::dpad::DPadPins;
 use archon_core::devices::layout::DeviceLayout;
 use archon_core::endpoint::ArchonEndpoint;
-use archon_core::input::InputDPad;
-use archon_core::input::InputJoyStick;
 use archon_core::input::InputType;
 use archon_core::ring::RingBuffer;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_futures;
 use embsys::crates::embassy_net;
-use embsys::crates::embassy_time;
 use embsys::drivers;
 use embsys::exts::std;
 
@@ -22,24 +16,13 @@ use std::sync::Mutex;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
-use std::time::Duration;
 use std::vec::Vec;
 
 use drivers::hardware::WIFIController;
 
-// use embassy_net::udp::AcceptError;
-// use embassy_net::udp::
-
 use embassy_net::udp::PacketMetadata;
 use embassy_net::udp::UdpSocket;
-use embassy_net::IpAddress;
 use embassy_net::IpEndpoint;
-use embassy_net::IpListenEndpoint;
-use embassy_net::Ipv4Address;
-
-use embassy_time::with_timeout;
-use embassy_time::TimeoutError;
-use embassy_time::Timer;
 
 // Better to provide a method to initialize this manually by the user
 static ARCHON: RwLock<ArchonTransmitter> = RwLock::new(ArchonTransmitter::new());
