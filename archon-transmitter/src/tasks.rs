@@ -4,10 +4,12 @@ use crate::transmitter::ArchonTransmitter;
 
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_net;
-use embsys::crates::embassy_time;
 use embsys::crates::heapless;
 use embsys::drivers;
+use embsys::exts::std;
 use embsys::helpers;
+
+use std::time::Duration;
 
 use helpers::task_handler::TaskState;
 use helpers::wpa_psk::WpaPsk;
@@ -19,7 +21,6 @@ use embassy_net::ConfigV4;
 use embassy_net::Ipv4Address;
 use embassy_net::Ipv4Cidr;
 use embassy_net::StaticConfigV4;
-use embassy_time::Duration;
 
 #[embassy_executor::task]
 pub async fn archon_send(_s: TaskState) {

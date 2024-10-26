@@ -6,6 +6,12 @@ use crate::tasks::archon_send;
 use crate::tasks::wifi_connect_static;
 use crate::transmitter::ArchonTransmitter;
 
+use crate::devices::create_dpad_device;
+use crate::devices::create_joystick_button_device;
+use crate::devices::create_joystick_device;
+use crate::devices::create_l1_button_device;
+use crate::devices::create_rotary_device;
+
 use archon_core::devices::button::ButtonConfiguration;
 use archon_core::devices::button::ButtonDevice;
 use archon_core::devices::dpad::DPadConfiguration;
@@ -38,82 +44,12 @@ use embsys::helpers;
 use embsys::setup::SysInit;
 
 use std::sync::Mutex;
-use std::time::Duration as StdDuration;
+use std::time::Duration;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
-use embassy_time::Duration;
 
 use helpers::task_handler::Task;
-
-fn create_dpad_device() -> DPadDevice {
-    let bounce_interval: StdDuration = StdDuration::from_millis(10);
-    let repeat_interval: StdDuration = StdDuration::from_millis(100);
-    let repeat_hold: StdDuration = StdDuration::from_millis(500);
-
-    let dpad_pins: DPadPins = DPadPins::new(10, 11, 15, 14);
-    let dpad_conf: DPadConfiguration =
-        DPadConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
-    let dpad_device: DPadDevice = DPadDevice::new(0, &dpad_pins, &dpad_conf);
-    dpad_device
-}
-
-async fn create_joystick_device() -> JoyStickDevice {
-    let x_pin = HWController::pac().PIN_26;
-    let y_pin = HWController::pac().PIN_27;
-    let joystick_adc: JoyStickAdc = JoyStickAdc::new(x_pin, y_pin);
-
-    let joystick_origin: JoyStickCoordinate = JoyStickCoordinate::TopRight;
-    let joystick_polling: DevicePolling = DevicePolling::new(Duration::from_millis(10));
-    let mut joystick_conf: JoyStickConfiguration =
-        JoyStickConfiguration::new(joystick_origin, joystick_polling);
-
-    let ema_filter: JoyStickFilter = JoyStickFilter::ema(20);
-    joystick_conf.add_filter(ema_filter);
-
-    let mut joystick_device: JoyStickDevice = JoyStickDevice::new(0, joystick_adc, joystick_conf);
-    let _ = joystick_device.calibrate_center(5000).await;
-
-    joystick_device
-}
-
-fn create_joystick_button_device() -> ButtonDevice {
-    let bounce_interval: StdDuration = StdDuration::from_millis(10);
-    let repeat_interval: StdDuration = StdDuration::from_millis(100);
-    let repeat_hold: StdDuration = StdDuration::from_millis(500);
-    let button_conf: ButtonConfiguration =
-        ButtonConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
-
-    let button_device: ButtonDevice = ButtonDevice::new(0, 22, &button_conf);
-    button_device
-}
-
-fn create_l1_button_device() -> ButtonDevice {
-    let bounce_interval: StdDuration = StdDuration::from_millis(10);
-    let repeat_interval: StdDuration = StdDuration::from_millis(100);
-    let repeat_hold: StdDuration = StdDuration::from_millis(500);
-    let button_conf: ButtonConfiguration =
-        ButtonConfiguration::new(bounce_interval, repeat_interval, repeat_hold);
-
-    let button_device: ButtonDevice = ButtonDevice::new(1, 12, &button_conf);
-    button_device
-}
-
-async fn create_rotary_device() -> RotaryDevice {
-    let v_pin = HWController::pac().PIN_28;
-    let rotary_adc: RotaryAdc = RotaryAdc::new(v_pin);
-
-    let rotary_polling: DevicePolling = DevicePolling::new(Duration::from_millis(10));
-    let mut rotary_conf: RotaryConfiguration = RotaryConfiguration::new(rotary_polling);
-
-    let interpolation_filter: RotaryFilter = RotaryFilter::linear_interpolation(40, 4080);
-    let ema_filter: RotaryFilter = RotaryFilter::ema(5);
-    rotary_conf.add_filter(interpolation_filter);
-    rotary_conf.add_filter(ema_filter);
-
-    let rotary_device: RotaryDevice = RotaryDevice::new(0, rotary_adc, rotary_conf);
-    rotary_device
-}
 
 async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
     let dpad_device: DPadDevice = create_dpad_device();

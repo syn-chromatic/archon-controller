@@ -1,7 +1,7 @@
-use embsys::crates::embassy_time;
+use embsys::exts::std;
 
-use embassy_time::Duration;
-use embassy_time::Instant;
+use std::time::Duration;
+use std::time::Instant;
 
 pub struct DevicePolling {
     poll_duration: Duration,

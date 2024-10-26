@@ -2,9 +2,9 @@
 #![allow(unused_variables)]
 
 use embsys::crates::defmt;
-use embsys::crates::embassy_time;
+use embsys::exts::std;
 
-use embassy_time::Instant;
+use std::time::Instant;
 
 pub struct FrameTime {
     max: f32,

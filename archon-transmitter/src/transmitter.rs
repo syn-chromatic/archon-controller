@@ -22,7 +22,7 @@ use std::sync::Mutex;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 use std::sync::RwLockWriteGuard;
-use std::time::Duration as StdDuration;
+use std::time::Duration;
 use std::vec::Vec;
 
 use drivers::hardware::WIFIController;
@@ -38,7 +38,6 @@ use embassy_net::IpListenEndpoint;
 use embassy_net::Ipv4Address;
 
 use embassy_time::with_timeout;
-use embassy_time::Duration;
 use embassy_time::TimeoutError;
 use embassy_time::Timer;
 

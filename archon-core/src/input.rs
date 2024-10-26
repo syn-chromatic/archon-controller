@@ -44,8 +44,15 @@ impl InputType {
         match &self {
             InputType::DPad(dpad) => {
                 let id: u8 = dpad.id();
-                let dpad_v: u8 = dpad.dpad().as_u8();
-                defmt::info!("ID: {:?} | DPAD: {:?} ", id, dpad_v,);
+                let name: &str = dpad.dpad().as_str();
+                let state = dpad.state();
+                defmt::info!(
+                    "ID: {:?} | DPAD: {:?} | STATE: {} | DURATION: {}",
+                    id,
+                    name,
+                    state.pressed(),
+                    state.duration()
+                );
             }
             InputType::JoyStick(joystick) => {
                 let id: u8 = joystick.id();
@@ -59,13 +66,18 @@ impl InputType {
             }
             InputType::Rotary(rotary) => {
                 let id: u8 = rotary.id();
-                let rotary_v: u16 = rotary.value();
-                defmt::info!("ID: {:?} | Rotary: {:?} ", id, rotary_v,);
+                let v: u16 = rotary.value();
+                defmt::info!("ID: {:?} | Rotary: {:?} ", id, v,);
             }
             InputType::Button(button) => {
                 let id: u8 = button.id();
-                let pressed: bool = button.state().pressed;
-                defmt::info!("ID: {:?} | BUTTON: {:?} ", id, pressed);
+                let state: &ButtonState = button.state();
+                defmt::info!(
+                    "ID: {:?} | STATE: {} | DURATION: {}",
+                    id,
+                    state.pressed(),
+                    state.duration()
+                );
             }
         }
     }

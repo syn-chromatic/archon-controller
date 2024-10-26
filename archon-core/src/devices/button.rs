@@ -1,40 +1,41 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use super::polling::DevicePolling;
 use crate::input::ButtonState;
 use crate::input::InputButton;
 use crate::input::InputType;
 
 use embsys::crates::embassy_rp;
-use embsys::crates::embassy_time;
 use embsys::devices::buttons;
 use embsys::drivers::hardware;
 use embsys::exts::std;
 
-use std::time::Duration as StdDuration;
+use std::time::Duration;
+use std::time::Instant;
 
 use buttons::standard::AdvButton;
 use embassy_rp::gpio::AnyPin;
-use embassy_time::Duration;
-use embassy_time::Instant;
 use hardware::get_pin;
 
-#[derive(Copy, Clone)]
 pub struct ButtonConfiguration {
-    bounce_interval: StdDuration,
-    repeat_interval: StdDuration,
-    repeat_hold: StdDuration,
+    polling: DevicePolling,
+    bounce: Duration,
+    repeat: Duration,
+    repeat_hold: Duration,
 }
 
 impl ButtonConfiguration {
     pub fn new(
-        bounce_interval: StdDuration,
-        repeat_interval: StdDuration,
-        repeat_hold: StdDuration,
+        polling: DevicePolling,
+        bounce: Duration,
+        repeat: Duration,
+        repeat_hold: Duration,
     ) -> Self {
         Self {
-            bounce_interval,
-            repeat_interval,
+            polling,
+            bounce,
+            repeat,
             repeat_hold,
         }
     }
@@ -61,20 +62,16 @@ impl ButtonDevice {
 }
 
 impl ButtonDevice {
-    pub fn new(id: u8, pin: u8, conf: &ButtonConfiguration) -> Self {
+    pub fn new(id: u8, pin: u8, conf: ButtonConfiguration) -> Self {
         let button_pin: AnyPin = get_pin(pin);
-        let button: AdvButton = AdvButton::new(
-            button_pin,
-            &conf.bounce_interval,
-            &conf.repeat_interval,
-            &conf.repeat_hold,
-        );
+        let button: AdvButton =
+            AdvButton::new(button_pin, &conf.bounce, &conf.repeat, &conf.repeat_hold);
 
         Self {
             id,
             button,
             press: None,
-            conf: *conf,
+            conf,
         }
     }
 

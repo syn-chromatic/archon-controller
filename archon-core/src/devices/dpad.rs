@@ -7,12 +7,12 @@ use crate::input::InputDPad;
 use crate::input::InputType;
 
 use embsys::crates::embassy_rp;
-use embsys::crates::embassy_time;
 use embsys::devices::buttons;
 use embsys::drivers::hardware;
 use embsys::exts::std;
 
-use std::time::Duration as StdDuration;
+use std::time::Duration;
+use std::time::Instant;
 
 use buttons::standard::AdvButton;
 
@@ -23,8 +23,6 @@ use hardware::InputTrait;
 use embassy_rp::gpio::AnyPin;
 use embassy_rp::gpio::Pin;
 use embassy_rp::gpio::Pull;
-use embassy_time::Duration;
-use embassy_time::Instant;
 
 pub struct DPadButton {
     vpin: u8,
@@ -78,20 +76,16 @@ impl DPadPins {
 
 #[derive(Copy, Clone)]
 pub struct DPadConfiguration {
-    bounce_interval: StdDuration,
-    repeat_interval: StdDuration,
-    repeat_hold: StdDuration,
+    bounce: Duration,
+    repeat: Duration,
+    repeat_hold: Duration,
 }
 
 impl DPadConfiguration {
-    pub fn new(
-        bounce_interval: StdDuration,
-        repeat_interval: StdDuration,
-        repeat_hold: StdDuration,
-    ) -> Self {
+    pub fn new(bounce: Duration, repeat: Duration, repeat_hold: Duration) -> Self {
         Self {
-            bounce_interval,
-            repeat_interval,
+            bounce,
+            repeat,
             repeat_hold,
         }
     }
@@ -185,30 +179,13 @@ impl DPadButtons {
         let down_pin: AnyPin = get_pin(pins.down);
         let left_pin: AnyPin = get_pin(pins.left);
 
-        let up: AdvButton = AdvButton::new(
-            up_pin,
-            &conf.bounce_interval,
-            &conf.repeat_interval,
-            &conf.repeat_hold,
-        );
-        let right: AdvButton = AdvButton::new(
-            right_pin,
-            &conf.bounce_interval,
-            &conf.repeat_interval,
-            &conf.repeat_hold,
-        );
-        let down: AdvButton = AdvButton::new(
-            down_pin,
-            &conf.bounce_interval,
-            &conf.repeat_interval,
-            &conf.repeat_hold,
-        );
-        let left: AdvButton = AdvButton::new(
-            left_pin,
-            &conf.bounce_interval,
-            &conf.repeat_interval,
-            &conf.repeat_hold,
-        );
+        let up: AdvButton = AdvButton::new(up_pin, &conf.bounce, &conf.repeat, &conf.repeat_hold);
+        let right: AdvButton =
+            AdvButton::new(right_pin, &conf.bounce, &conf.repeat, &conf.repeat_hold);
+        let down: AdvButton =
+            AdvButton::new(down_pin, &conf.bounce, &conf.repeat, &conf.repeat_hold);
+        let left: AdvButton =
+            AdvButton::new(left_pin, &conf.bounce, &conf.repeat, &conf.repeat_hold);
 
         Self {
             up,

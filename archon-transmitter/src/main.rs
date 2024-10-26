@@ -18,3 +18,4 @@ mod entry;
 mod tasks;
 mod tests;
 mod transmitter;
+mod devices;
