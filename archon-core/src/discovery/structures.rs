@@ -1,8 +1,9 @@
 use crate::consts::MC_BUFFER;
-use crate::endpoint::ArchonAddressIPv4;
 use crate::endpoint::ArchonEndpoint;
+use crate::utils::split_u16;
 
 use embsys::crates::defmt;
+use embsys::crates::embassy_net;
 use embsys::exts::std;
 
 use std::string::String;
@@ -12,9 +13,57 @@ use std::vec::Vec;
 
 use defmt::Format;
 
+use embassy_net::IpAddress;
+use embassy_net::IpEndpoint;
+
+#[derive(Clone, Format)]
+pub struct DiscoveryInformation {
+    addr: [u8; 4],
+    announce_info: AnnounceInformation,
+}
+
+impl DiscoveryInformation {
+    pub fn new(addr: [u8; 4], announce_info: AnnounceInformation) -> Self {
+        Self {
+            addr,
+            announce_info,
+        }
+    }
+
+    pub fn addr(&self) -> [u8; 4] {
+        self.addr
+    }
+
+    pub fn addr_type(&self) -> IpAddress {
+        let (a0, a1, a2, a3) = self.addr.into();
+        IpAddress::v4(a0, a1, a2, a3)
+    }
+
+    pub fn announce_info(&self) -> &AnnounceInformation {
+        &self.announce_info
+    }
+
+    pub fn tcp_endpoint(&self) -> IpEndpoint {
+        let addr: IpAddress = self.addr_type();
+        let tcp_port: u16 = self.announce_info.tcp_port();
+        let endpoint: IpEndpoint = IpEndpoint::new(addr, tcp_port);
+        endpoint
+    }
+
+    pub fn defmt(&self) {
+        defmt::info!(
+            "Name: {} | Addr: {:?}, TCP Port: {}",
+            self.announce_info.name,
+            self.addr,
+            self.announce_info.tcp_port,
+        );
+    }
+}
+
 #[derive(Clone, Format)]
 pub struct AnnounceInformation {
     name: String,
+    tcp_port: u16,
 }
 
 impl AnnounceInformation {
@@ -37,53 +86,78 @@ impl AnnounceInformation {
 }
 
 impl AnnounceInformation {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, tcp_port: u16) -> Self {
         assert!(name.len() <= 32 && name.is_ascii());
         let name: String = name.to_string();
-        Self { name }
+        Self { name, tcp_port }
     }
 
     pub fn from_buffer(buffer: &[u8; MC_BUFFER]) -> Self {
         let name: String = Self::ascii_be_to_string(&buffer[0..=31]);
-        Self { name }
+        let tcp_port_be: [u8; 2] = buffer[32..=33].try_into().unwrap();
+        let tcp_port: u16 = u16::from_be_bytes(tcp_port_be);
+        Self { name, tcp_port }
     }
 
     pub fn to_buffer(&self) -> [u8; MC_BUFFER] {
         let mut buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
 
         let name_be: [u8; 32] = self.str_to_ascii_be();
+        let tcp_port_be: [u8; 2] = split_u16(self.tcp_port);
         buffer[0..=31].copy_from_slice(&name_be);
+        buffer[32..=33].copy_from_slice(&tcp_port_be);
 
         buffer
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn tcp_port(&self) -> u16 {
+        self.tcp_port
     }
 }
 
 #[derive(Clone, Format)]
-pub struct DiscoveryInformation {
-    info: AnnounceInformation,
+pub struct EstablishInformation {
     addr: [u8; 4],
     port: u16,
 }
 
-impl DiscoveryInformation {
-    pub fn new(info: AnnounceInformation, addr: [u8; 4], port: u16) -> Self {
-        Self { info, addr, port }
+impl EstablishInformation {
+    pub fn new(addr: [u8; 4], port: u16) -> Self {
+        Self { addr, port }
     }
 
-    pub fn endpoint(&self) -> ArchonEndpoint {
-        let addr: ArchonAddressIPv4 =
-            ArchonAddressIPv4::new(self.addr[0], self.addr[1], self.addr[2], self.addr[3]);
-        let endpoint: ArchonEndpoint = ArchonEndpoint::new(addr, self.port);
-        endpoint
+    pub fn from_buffer(buffer: &[u8; MC_BUFFER]) -> Self {
+        let addr: [u8; 4] = buffer[0..=3].try_into().unwrap();
+        let port_be: [u8; 2] = buffer[4..=5].try_into().unwrap();
+        let port: u16 = u16::from_be_bytes(port_be);
+        Self { addr, port }
     }
 
-    pub fn defmt(&self) {
-        defmt::info!(
-            "Name: {} | Addr: {:?} | Port: {}",
-            self.info.name,
-            self.addr,
-            self.port
-        );
+    pub fn to_buffer(&self) -> [u8; MC_BUFFER] {
+        let mut buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
+
+        let addr_be: [u8; 4] = self.addr;
+        let port_be: [u8; 2] = split_u16(self.port);
+        buffer[0..=3].copy_from_slice(&addr_be);
+        buffer[4..=5].copy_from_slice(&port_be);
+
+        buffer
+    }
+
+    pub fn addr(&self) -> [u8; 4] {
+        self.addr
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn archon_endpoint(&self) -> ArchonEndpoint {
+        ArchonEndpoint::new(self.addr.into(), self.port)
     }
 }
 

@@ -3,4 +3,4 @@
 
 // BUFFER Setup
 pub const UDP_BUFFER: usize = 32;
-pub const MC_BUFFER: usize = 32;
+pub const MC_BUFFER: usize = 64;

@@ -17,8 +17,8 @@ use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::layout::DeviceLayout;
 use archon_core::devices::rotary::RotaryDevice;
-use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
+use archon_core::discovery::EstablishInformation;
 use archon_core::discovery::MultiCastDiscovery;
 use archon_core::endpoint::ArchonEndpoint;
 
@@ -52,14 +52,23 @@ async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
     layout.lock().add_button(l1_button_device);
 }
 
-async fn get_discovery_information(status: &DiscoveryStatus) -> DiscoveryInformation {
+async fn get_discovery_information(
+    discovery: &MultiCastDiscovery,
+    status: &DiscoveryStatus,
+) -> EstablishInformation {
     loop {
         let state = status.state();
         let discovered = status.discovered();
 
         defmt::info!("State: {:?} | Discovered: {:?}", state, discovered);
         if !discovered.is_empty() {
-            return discovered.first().unwrap().clone();
+            let info = discovered.last().unwrap().clone();
+            let establish = discovery.connect(&info).await;
+            if let Ok(establish) = establish {
+                return establish;
+            } else if let Err(error) = establish {
+                defmt::info!("Error -> {:?}", error);
+            }
         }
 
         embassy_time::Timer::after_millis(500).await;
@@ -102,9 +111,10 @@ async fn entry(spawner: Spawner) {
     let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
     let _ = discovery.join().await;
     let status: &DiscoveryStatus = discovery.start_discovery(&send_spawner).await.unwrap();
-    let disc_info: DiscoveryInformation = get_discovery_information(status).await;
+    let establish: EstablishInformation = get_discovery_information(&discovery, status).await;
+    discovery.stop_discovery().await;
 
-    let endpoint: ArchonEndpoint = disc_info.endpoint();
+    let endpoint: ArchonEndpoint = establish.archon_endpoint();
 
     ArchonTransmitter::read_lock().set_endpoint(endpoint);
 

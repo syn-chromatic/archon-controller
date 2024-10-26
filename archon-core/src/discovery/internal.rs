@@ -37,6 +37,7 @@ pub(in crate::discovery) async fn _udp_discovery() -> Result<(), BindError> {
     );
 
     udp.bind(IpEndpoint::new(IpAddress::v4(0, 0, 0, 0), 5000))?;
+
     let mut buf = [0; MC_BUFFER];
     _udp_discovery_loop(&mut udp, &mut buf).await;
     Ok(())
@@ -55,14 +56,13 @@ pub(in crate::discovery) async fn _udp_discovery_loop(
                 match addr.version() {
                     IpVersion::Ipv4 => {
                         let addr: [u8; 4] = addr.as_bytes().try_into().unwrap();
-                        let port: u16 = _src.endpoint.port;
 
-                        let anno_info: AnnounceInformation = AnnounceInformation::from_buffer(&buf);
-                        let disc_info: DiscoveryInformation =
-                            DiscoveryInformation::new(anno_info, addr, port);
-                        disc_info.defmt();
+                        let announce_info: AnnounceInformation =
+                            AnnounceInformation::from_buffer(&buf);
+                        let discovery_info: DiscoveryInformation =
+                            DiscoveryInformation::new(addr, announce_info);
 
-                        STATUS.push(disc_info);
+                        STATUS.push(discovery_info);
                     }
                 }
             }

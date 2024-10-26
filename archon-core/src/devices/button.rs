@@ -77,7 +77,7 @@ impl ButtonDevice {
 
     pub fn get_input(&mut self) -> Option<InputButton> {
         if self.button.is_pressed() {
-            let duration: u16 = self.press_duration().as_millis() as u16;
+            let duration: u64 = self.press_duration().as_millis();
             let state: ButtonState = ButtonState::new(true, duration);
             let button: InputButton = InputButton::new(self.id, state);
             return Some(button);

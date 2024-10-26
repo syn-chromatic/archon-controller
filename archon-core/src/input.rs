@@ -45,9 +45,9 @@ impl InputType {
             InputType::DPad(dpad) => {
                 let id: u8 = dpad.id();
                 let name: &str = dpad.dpad().as_str();
-                let state = dpad.state();
+                let state: &ButtonState = dpad.state();
                 defmt::info!(
-                    "ID: {:?} | DPAD: {:?} | STATE: {} | DURATION: {}",
+                    "DPAD -> ID: {:?} | DIR: {:?} | STATE: {} | DURATION: {}",
                     id,
                     name,
                     state.pressed(),
@@ -57,23 +57,23 @@ impl InputType {
             InputType::JoyStick(joystick) => {
                 let id: u8 = joystick.id();
                 let xy: (u16, u16) = joystick.xy();
-                defmt::info!("ID: {:?} | XY: {:?}", id, xy,);
+                defmt::info!("JOYSTICK -> ID: {:?} | XY: {:?}", id, xy);
             }
             InputType::ASCII(input_ascii) => {
                 let id: u8 = input_ascii.id();
                 let c: char = input_ascii.char();
-                defmt::info!("ID: {:?} | ASCII: {:?}", id, c,);
+                defmt::info!("ASCII -> ID: {:?} | ASCII: {:?}", id, c);
             }
             InputType::Rotary(rotary) => {
                 let id: u8 = rotary.id();
                 let v: u16 = rotary.value();
-                defmt::info!("ID: {:?} | Rotary: {:?} ", id, v,);
+                defmt::info!("ROTARY -> ID: {:?} | VALUE: {:?} ", id, v);
             }
             InputType::Button(button) => {
                 let id: u8 = button.id();
                 let state: &ButtonState = button.state();
                 defmt::info!(
-                    "ID: {:?} | STATE: {} | DURATION: {}",
+                    "BUTTON -> ID: {:?} | STATE: {} | DURATION: {}",
                     id,
                     state.pressed(),
                     state.duration()
@@ -117,7 +117,17 @@ pub struct ButtonState {
 }
 
 impl ButtonState {
-    pub fn new(pressed: bool, duration: u16) -> Self {
+    fn u64_duration_to_u16(duration: u64) -> u16 {
+        if duration > u16::MAX as u64 {
+            return u16::MAX;
+        }
+        duration as u16
+    }
+}
+
+impl ButtonState {
+    pub fn new(pressed: bool, duration: u64) -> Self {
+        let duration = Self::u64_duration_to_u16(duration);
         Self { pressed, duration }
     }
 
@@ -173,8 +183,7 @@ impl InputDPad {
         let type_be: [u8; 2] = [0x00, 0x00];
         let dpad_be: u8 = self.dpad.as_u8();
         let pressed: u8 = self.state.pressed.into();
-        let duration: u16 = self.state.duration.to_be();
-        let duration: [u8; 2] = split_u16(duration);
+        let duration: [u8; 2] = split_u16(self.state.duration);
 
         let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
         buffer[0] = id_be;
@@ -380,10 +389,9 @@ impl InputButton {
 
     pub fn to_buffer(&self) -> [u8; UDP_BUFFER] {
         let id_be: u8 = self.id.to_be();
-        let type_be: [u8; 2] = [0x00, 0x00];
+        let type_be: [u8; 2] = [0x00, 0x04];
         let pressed: u8 = self.state.pressed.into();
-        let duration: u16 = self.state.duration.to_be();
-        let duration: [u8; 2] = split_u16(duration);
+        let duration: [u8; 2] = split_u16(self.state.duration);
 
         let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
         buffer[0] = id_be;

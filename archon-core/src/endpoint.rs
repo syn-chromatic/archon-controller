@@ -6,7 +6,6 @@ use embsys::crates::embassy_net;
 use embassy_net::IpAddress;
 use embassy_net::IpEndpoint;
 use embassy_net::IpListenEndpoint;
-use embassy_net::Ipv4Address;
 
 #[derive(Copy, Clone)]
 pub struct ArchonAddressIPv4 {
@@ -15,12 +14,20 @@ pub struct ArchonAddressIPv4 {
 
 impl ArchonAddressIPv4 {
     pub fn new(a0: u8, a1: u8, a2: u8, a3: u8) -> Self {
-        let addr: IpAddress = IpAddress::Ipv4(Ipv4Address::new(a0, a1, a2, a3));
+        let addr: IpAddress = IpAddress::v4(a0, a1, a2, a3);
         Self { addr }
     }
 
     pub fn addr(&self) -> &IpAddress {
         &self.addr
+    }
+}
+
+impl From<[u8; 4]> for ArchonAddressIPv4 {
+    fn from(value: [u8; 4]) -> Self {
+        let (a0, a1, a2, a3) = value.into();
+        let addr: IpAddress = IpAddress::v4(a0, a1, a2, a3);
+        Self { addr }
     }
 }
 

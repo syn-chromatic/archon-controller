@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::consts::INPUT_BUFFER;
 
 use archon_core::consts::UDP_BUFFER;
@@ -41,7 +42,7 @@ impl ArchonTransmitter {
         tx_buffer: &'a mut [u8; UDP_BUFFER],
     ) -> UdpSocket<'a> {
         defmt::info!("Creating UDP Socket..");
-        let tcp: UdpSocket = UdpSocket::new(
+        let udp: UdpSocket = UdpSocket::new(
             WIFIController::stack_ref(),
             rx_meta,
             rx_buffer,
@@ -49,7 +50,7 @@ impl ArchonTransmitter {
             tx_buffer,
         );
         defmt::info!("UDP Socket created!");
-        tcp
+        udp
     }
 
     async fn send_inputs(&self, udp: &mut UdpSocket<'_>) {

@@ -223,28 +223,28 @@ impl DPadDevice {
         let mut inputs: [Option<InputDPad>; 4] = [const { None }; 4];
 
         if self.buttons.up.is_pressed() {
-            let duration: u16 = self.buttons.up_press_duration().as_millis() as u16;
+            let duration: u64 = self.buttons.up_press_duration().as_millis();
             let state: ButtonState = ButtonState::new(true, duration);
             let dpad: InputDPad = InputDPad::new(self.id, DPad::Up, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.right.is_pressed() {
-            let duration: u16 = self.buttons.right_press_duration().as_millis() as u16;
+            let duration: u64 = self.buttons.right_press_duration().as_millis();
             let state: ButtonState = ButtonState::new(true, duration);
             let dpad: InputDPad = InputDPad::new(self.id, DPad::Right, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.down.is_pressed() {
-            let duration: u16 = self.buttons.down_press_duration().as_millis() as u16;
+            let duration: u64 = self.buttons.down_press_duration().as_millis();
             let state: ButtonState = ButtonState::new(true, duration);
             let dpad: InputDPad = InputDPad::new(self.id, DPad::Down, state);
             inputs[0] = Some(dpad);
         }
 
         if self.buttons.left.is_pressed() {
-            let duration: u16 = self.buttons.left_press_duration().as_millis() as u16;
+            let duration: u64 = self.buttons.left_press_duration().as_millis();
             let state: ButtonState = ButtonState::new(true, duration);
             let dpad: InputDPad = InputDPad::new(self.id, DPad::Left, state);
             inputs[0] = Some(dpad);
