@@ -16,11 +16,13 @@ use embsys::exts::non_std;
 use embsys::exts::std;
 
 use non_std::error::net::TCPError;
+use non_std::error::net::UDPError;
 use non_std::future::with_cancel;
 use std::time::Duration;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::SpawnError;
+use embassy_time::with_timeout;
 use embassy_time::Timer;
 
 use embassy_net::tcp::ConnectError;
@@ -38,12 +40,23 @@ use hardware::WIFIController;
 
 pub struct MultiCastDiscovery {
     multicast_addr: IpAddress,
+    multicast_port: u16,
+}
+
+impl MultiCastDiscovery {
+    fn multicast_endpoint(&self) -> IpEndpoint {
+        IpEndpoint::new(self.multicast_addr, self.multicast_port)
+    }
 }
 
 impl MultiCastDiscovery {
     pub fn new() -> Self {
-        let multicast_addr = IpAddress::v4(224, 0, 0, 1);
-        Self { multicast_addr }
+        let multicast_addr: IpAddress = IpAddress::v4(230, 100, 80, 20);
+        let multicast_port: u16 = 5000;
+        Self {
+            multicast_addr,
+            multicast_port,
+        }
     }
 
     pub async fn join(&self) -> Result<bool, MulticastError> {
@@ -82,7 +95,7 @@ impl MultiCastDiscovery {
             TcpSocket::new(WIFIController::stack_ref(), &mut rx_buffer, &mut tx_buffer);
         tcp.set_timeout(Some(Duration::from_secs(5)));
 
-        let tcp_endpoint: IpEndpoint = discovery_info.tcp_endpoint();
+        let tcp_endpoint: IpEndpoint = discovery_info.remote_tcp_endpoint();
 
         let result: Result<(), ConnectError> = tcp.connect(tcp_endpoint).await;
         if let Err(error) = result {
@@ -90,7 +103,7 @@ impl MultiCastDiscovery {
         }
 
         let establish: EstablishInformation =
-            EstablishInformation::new(discovery_info.addr(), 5000);
+            EstablishInformation::new(discovery_info.remote_addr(), 5000);
         let result: Result<usize, Error> = tcp.write(&establish.to_buffer()).await;
         if let Err(error) = result {
             return Err(TCPError::Error(error));
@@ -102,10 +115,7 @@ impl MultiCastDiscovery {
         Ok(establish)
     }
 
-    pub async fn announce(
-        &self,
-        info: &AnnounceInformation,
-    ) -> Result<IpListenEndpoint, SendError> {
+    pub async fn announce(&self) -> Result<EstablishInformation, UDPError> {
         let mut rx_meta: [PacketMetadata; MC_BUFFER] = [PacketMetadata::EMPTY; MC_BUFFER];
         let mut rx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
         let mut tx_meta: [PacketMetadata; MC_BUFFER] = [PacketMetadata::EMPTY; MC_BUFFER];
@@ -119,17 +129,46 @@ impl MultiCastDiscovery {
             &mut tx_buffer,
         );
 
-        let endpoint: IpEndpoint = IpEndpoint::new(IpAddress::v4(0, 0, 0, 0), 0);
-        let _ = udp.bind(endpoint);
+        let endpoint: IpListenEndpoint = IpListenEndpoint {
+            addr: None,
+            port: 0,
+        };
+        udp.bind(endpoint)?;
 
-        let buffer = info.to_buffer();
+        let mut rx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
+        let mut tx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
+        let mut tcp: TcpSocket<'_> =
+            TcpSocket::new(WIFIController::stack_ref(), &mut rx_buffer, &mut tx_buffer);
+        let tcp_timeout: Duration = Duration::from_millis(1000);
+        tcp.set_timeout(Some(tcp_timeout));
+
+        let tcp_port: u16 = 53854;
+        let announce_info: AnnounceInformation =
+            AnnounceInformation::new("RP2040 Receiver", tcp_port);
+        let multicast_endpoint: IpEndpoint = self.multicast_endpoint();
+
         loop {
-            let endpoint: IpEndpoint = IpEndpoint::new(self.multicast_addr, 5000);
-            let result: Result<(), SendError> = udp.send_to(&buffer, endpoint).await;
+            let announce_buffer: [u8; MC_BUFFER] = announce_info.to_buffer();
+            let result: Result<(), SendError> =
+                udp.send_to(&announce_buffer, multicast_endpoint).await;
+
             if let Ok(_) = result {
-                let addr: IpListenEndpoint = udp.endpoint();
-                return Ok(addr);
+                if let Ok(result) = with_timeout(tcp_timeout, tcp.accept(tcp_port)).await {
+                    if let Ok(_) = result {
+                        let mut buf: [u8; MC_BUFFER] = [0; MC_BUFFER];
+                        let result: Result<usize, Error> = tcp.read(&mut buf).await;
+                        if let Ok(_size) = result {
+                            let establish: EstablishInformation =
+                                EstablishInformation::from_buffer(&buf);
+                            establish.defmt();
+                            return Ok(establish);
+                        }
+                    }
+                } else {
+                    continue;
+                }
             }
+            Timer::after_millis(1000).await;
         }
     }
 }

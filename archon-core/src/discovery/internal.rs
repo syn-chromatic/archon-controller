@@ -17,10 +17,20 @@ use embassy_net::udp::PacketMetadata;
 use embassy_net::udp::UdpSocket;
 use embassy_net::IpAddress;
 use embassy_net::IpEndpoint;
+use embassy_net::StaticConfigV4;
 
 use hardware::WIFIController;
 
 pub(in crate::discovery) static STATUS: DiscoveryStatus = DiscoveryStatus::new();
+
+pub(in crate::discovery) fn _get_local_addr() -> [u8; 4] {
+    let config: Option<StaticConfigV4> = WIFIController::borrow_mut().get_config_v4();
+    if let Some(config) = config {
+        let addr: [u8; 4] = config.address.address().0;
+        return addr;
+    }
+    [0, 0, 0, 0]
+}
 
 pub(in crate::discovery) async fn _udp_discovery() -> Result<(), BindError> {
     let mut rx_meta: [PacketMetadata; MC_BUFFER] = [PacketMetadata::EMPTY; MC_BUFFER];
@@ -55,12 +65,13 @@ pub(in crate::discovery) async fn _udp_discovery_loop(
 
                 match addr.version() {
                     IpVersion::Ipv4 => {
-                        let addr: [u8; 4] = addr.as_bytes().try_into().unwrap();
+                        let remote_addr: [u8; 4] = addr.as_bytes().try_into().unwrap();
+                        let local_addr: [u8; 4] = _get_local_addr();
 
                         let announce_info: AnnounceInformation =
                             AnnounceInformation::from_buffer(&buf);
                         let discovery_info: DiscoveryInformation =
-                            DiscoveryInformation::new(addr, announce_info);
+                            DiscoveryInformation::new(remote_addr, local_addr, announce_info);
 
                         STATUS.push(discovery_info);
                     }

@@ -1,5 +1,6 @@
 use crate::consts::MC_BUFFER;
 use crate::endpoint::ArchonEndpoint;
+use crate::endpoint::ArchonListenEndpoint;
 use crate::utils::split_u16;
 
 use embsys::crates::defmt;
@@ -18,24 +19,39 @@ use embassy_net::IpEndpoint;
 
 #[derive(Clone, Format)]
 pub struct DiscoveryInformation {
-    addr: [u8; 4],
+    remote_addr: [u8; 4],
+    local_addr: [u8; 4],
     announce_info: AnnounceInformation,
 }
 
 impl DiscoveryInformation {
-    pub fn new(addr: [u8; 4], announce_info: AnnounceInformation) -> Self {
+    pub fn new(
+        remote_addr: [u8; 4],
+        local_addr: [u8; 4],
+        announce_info: AnnounceInformation,
+    ) -> Self {
         Self {
-            addr,
+            remote_addr,
+            local_addr,
             announce_info,
         }
     }
 
-    pub fn addr(&self) -> [u8; 4] {
-        self.addr
+    pub fn remote_addr(&self) -> [u8; 4] {
+        self.remote_addr
     }
 
-    pub fn addr_type(&self) -> IpAddress {
-        let (a0, a1, a2, a3) = self.addr.into();
+    pub fn remote_addr_type(&self) -> IpAddress {
+        let (a0, a1, a2, a3) = self.remote_addr.into();
+        IpAddress::v4(a0, a1, a2, a3)
+    }
+
+    pub fn local_addr(&self) -> [u8; 4] {
+        self.local_addr
+    }
+
+    pub fn local_addr_type(&self) -> IpAddress {
+        let (a0, a1, a2, a3) = self.local_addr.into();
         IpAddress::v4(a0, a1, a2, a3)
     }
 
@@ -43,8 +59,8 @@ impl DiscoveryInformation {
         &self.announce_info
     }
 
-    pub fn tcp_endpoint(&self) -> IpEndpoint {
-        let addr: IpAddress = self.addr_type();
+    pub fn remote_tcp_endpoint(&self) -> IpEndpoint {
+        let addr: IpAddress = self.remote_addr_type();
         let tcp_port: u16 = self.announce_info.tcp_port();
         let endpoint: IpEndpoint = IpEndpoint::new(addr, tcp_port);
         endpoint
@@ -52,9 +68,10 @@ impl DiscoveryInformation {
 
     pub fn defmt(&self) {
         defmt::info!(
-            "Name: {} | Addr: {:?}, TCP Port: {}",
+            "Name: {} | Remote Addr: {:?}, Local Addr: {:?} | TCP Port: {}",
             self.announce_info.name,
-            self.addr,
+            self.remote_addr,
+            self.local_addr,
             self.announce_info.tcp_port,
         );
     }
@@ -158,6 +175,14 @@ impl EstablishInformation {
 
     pub fn archon_endpoint(&self) -> ArchonEndpoint {
         ArchonEndpoint::new(self.addr.into(), self.port)
+    }
+
+    pub fn archon_listen_endpoint(&self) -> ArchonListenEndpoint {
+        ArchonListenEndpoint::new(Some(self.addr.into()), self.port)
+    }
+
+    pub fn defmt(&self) {
+        defmt::info!("ADDR: {:?} | PORT: {}", self.addr, self.port);
     }
 }
 

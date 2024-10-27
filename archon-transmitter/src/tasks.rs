@@ -48,12 +48,11 @@ pub async fn wifi_connect_static(_s: TaskState) {
     let wifi_controller: &mut WIFIController = WIFIController::borrow_mut();
 
     let psk: [u8; 32] = WpaPsk::new().derive_psk(WIFI_SSID, WIFI_PASS);
-    let address: Ipv4Cidr = Ipv4Cidr::new(Ipv4Address::new(192, 168, 0, 160), 16);
+    let address: Ipv4Cidr = Ipv4Cidr::new(Ipv4Address::new(192, 168, 0, 160), 24);
     let gateway: Ipv4Address = Ipv4Address::new(192, 168, 0, 1);
 
     let mut dns_servers: Vec<Ipv4Address, 3> = Vec::new();
-    dns_servers.push(Ipv4Address::new(1, 1, 1, 1)).unwrap();
-    dns_servers.push(Ipv4Address::new(1, 0, 0, 1)).unwrap();
+    dns_servers.push(Ipv4Address::new(192, 168, 0, 1)).unwrap();
 
     let static_config = StaticConfigV4 {
         address,
