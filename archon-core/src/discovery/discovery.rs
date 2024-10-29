@@ -8,7 +8,9 @@ use super::structures::EstablishInformation;
 
 use crate::consts::MC_BUFFER;
 
+use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
+use embsys::crates::embassy_futures;
 use embsys::crates::embassy_net;
 use embsys::crates::embassy_time;
 use embsys::drivers::hardware;
@@ -97,10 +99,13 @@ impl MultiCastDiscovery {
 
         let tcp_endpoint: IpEndpoint = discovery_info.remote_tcp_endpoint();
 
+        defmt::info!("Connecting to endpoint... {:?}", tcp_endpoint);
         let result: Result<(), ConnectError> = tcp.connect(tcp_endpoint).await;
         if let Err(error) = result {
             return Err(TCPError::ConnectError(error));
         }
+
+        defmt::info!("Connected!");
 
         let establish: EstablishInformation =
             EstablishInformation::new(discovery_info.remote_addr(), 5000);
@@ -109,9 +114,12 @@ impl MultiCastDiscovery {
             return Err(TCPError::Error(error));
         }
 
+        defmt::info!("Sent establish information!");
         while tcp.send_queue() > 0 {
+            embassy_futures::yield_now().await;
             Timer::after_millis(100).await;
         }
+        defmt::info!("Connect complete!");
         Ok(establish)
     }
 
@@ -139,10 +147,10 @@ impl MultiCastDiscovery {
         let mut tx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
         let mut tcp: TcpSocket<'_> =
             TcpSocket::new(WIFIController::stack_ref(), &mut rx_buffer, &mut tx_buffer);
-        let tcp_timeout: Duration = Duration::from_millis(1000);
+        let tcp_timeout: Duration = Duration::from_secs(5);
         tcp.set_timeout(Some(tcp_timeout));
 
-        let tcp_port: u16 = 53854;
+        let tcp_port: u16 = 49586;
         let announce_info: AnnounceInformation =
             AnnounceInformation::new("RP2040 Receiver", tcp_port);
         let multicast_endpoint: IpEndpoint = self.multicast_endpoint();

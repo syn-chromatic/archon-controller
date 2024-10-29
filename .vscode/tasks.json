@@ -44,9 +44,18 @@
             }
         },
         {
+            "label": "Attach Archon Transmitter",
             "type": "shell",
-            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/debug/archon-transmitter",
-            "label": "rust: attach debug",
+            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/${input:targets}/archon-transmitter",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Attach Archon Receiver",
+            "type": "shell",
+            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/${input:targets}/archon-receiver",
             "group": {
                 "kind": "test",
                 "isDefault": true
@@ -63,6 +72,15 @@
                 "dev-optimized",
                 "release",
                 "release-optimized"
+            ]
+        },
+        {
+            "id": "targets",
+            "type": "pickString",
+            "description": "Specify Target",
+            "options": [
+                "debug",
+                "release",
             ]
         },
         {

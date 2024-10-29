@@ -1,6 +1,5 @@
 use crate::consts::MC_BUFFER;
 use crate::endpoint::ArchonEndpoint;
-use crate::endpoint::ArchonListenEndpoint;
 use crate::utils::split_u16;
 
 use embsys::crates::defmt;
@@ -175,10 +174,6 @@ impl EstablishInformation {
 
     pub fn archon_endpoint(&self) -> ArchonEndpoint {
         ArchonEndpoint::new(self.addr.into(), self.port)
-    }
-
-    pub fn archon_listen_endpoint(&self) -> ArchonListenEndpoint {
-        ArchonListenEndpoint::new(Some(self.addr.into()), self.port)
     }
 
     pub fn defmt(&self) {

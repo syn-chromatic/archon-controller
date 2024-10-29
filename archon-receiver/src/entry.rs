@@ -10,7 +10,7 @@ use crate::tasks::wifi_connect_static;
 use archon_core::discovery::DiscoveryStatus;
 use archon_core::discovery::EstablishInformation;
 use archon_core::discovery::MultiCastDiscovery;
-use archon_core::endpoint::ArchonListenEndpoint;
+use archon_core::endpoint::ArchonEndpoint;
 use archon_core::input::InputType;
 
 use embsys::crates::cortex_m_rt;
@@ -60,7 +60,7 @@ async fn rp2040_entry(spawner: Spawner) {
     let result: Result<EstablishInformation, UDPError> = discovery.announce().await;
     if let Ok(establish) = result {
         defmt::info!("Establish: {:?}", establish);
-        let endpoint: ArchonListenEndpoint = establish.archon_listen_endpoint();
+        let endpoint: ArchonEndpoint = establish.archon_endpoint();
         ArchonReceiver::read_lock().set_endpoint(endpoint);
 
         defmt::info!("Archon is in listening mode..");

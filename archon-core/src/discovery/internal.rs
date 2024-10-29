@@ -88,4 +88,5 @@ pub(in crate::discovery) async fn _udp_cancel_discovery() {
     while STATUS.state() {
         embassy_futures::yield_now().await;
     }
+    defmt::info!("Canceled UDP Discovery!");
 }

@@ -4,18 +4,18 @@
 use crate::consts::INPUT_BUFFER;
 
 use archon_core::consts::UDP_BUFFER;
-use archon_core::diagnostics::frametime::FrameTime;
-use archon_core::endpoint::ArchonListenEndpoint;
+use archon_core::endpoint::ArchonEndpoint;
 use archon_core::input::InputType;
 use archon_core::ring::RingBuffer;
 use archon_core::status::ArchonStatus;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_net;
-use embsys::crates::embassy_time;
 use embsys::drivers;
+use embsys::exts::non_std;
 use embsys::exts::std;
 
+use non_std::error::net::UDPError;
 use std::sync::Mutex;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
@@ -23,101 +23,62 @@ use std::sync::RwLockWriteGuard;
 
 use drivers::hardware::WIFIController;
 
-use embassy_net::tcp::AcceptError;
-use embassy_net::tcp::Error as TCPError;
-use embassy_net::tcp::TcpSocket;
-use embassy_net::IpListenEndpoint;
-
-use embassy_time::with_timeout;
-use embassy_time::Duration;
-use embassy_time::Instant;
-use embassy_time::TimeoutError;
+use embassy_net::udp::BindError;
+use embassy_net::udp::PacketMetadata;
+use embassy_net::udp::RecvError;
+use embassy_net::udp::UdpMetadata;
+use embassy_net::udp::UdpSocket;
+use embassy_net::IpAddress;
+use embassy_net::IpEndpoint;
 
 // Better to provide a method to initialize this manually by the user
 static ARCHON: RwLock<ArchonReceiver> = RwLock::new(ArchonReceiver::new());
 
 pub struct ArchonReceiver {
     status: Mutex<ArchonStatus>,
-    endpoint: Mutex<ArchonListenEndpoint>,
+    endpoint: Mutex<Option<ArchonEndpoint>>,
     ring: Mutex<RingBuffer<InputType, INPUT_BUFFER>>,
 }
 
 impl ArchonReceiver {
     fn create_socket<'a>(
+        rx_meta: &'a mut [PacketMetadata; UDP_BUFFER],
         rx_buffer: &'a mut [u8; UDP_BUFFER],
+        tx_meta: &'a mut [PacketMetadata; UDP_BUFFER],
         tx_buffer: &'a mut [u8; UDP_BUFFER],
-    ) -> TcpSocket<'a> {
-        defmt::info!("Creating TCP Socket..");
-        let tcp: TcpSocket = TcpSocket::new(WIFIController::stack_ref(), rx_buffer, tx_buffer);
-        defmt::info!("TCP Socket created!");
-        tcp
+    ) -> UdpSocket<'a> {
+        defmt::info!("Creating UDP Socket..");
+        let udp: UdpSocket = UdpSocket::new(
+            WIFIController::stack_ref(),
+            rx_meta,
+            rx_buffer,
+            tx_meta,
+            tx_buffer,
+        );
+        defmt::info!("UDP Socket created!");
+        udp
     }
 
-    async fn accept_socket(&self, tcp: &mut TcpSocket<'_>) -> Result<(), AcceptError> {
-        defmt::info!("Awaiting TCP Connection request..");
-        let endpoint: IpListenEndpoint = self.endpoint.lock().endpoint();
+    async fn receive_inputs(&self, udp: &mut UdpSocket<'_>) {
+        let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
+        let mut led: bool = false;
 
-        self.status.lock().set_listening(true);
-        let result: Result<(), AcceptError> = tcp.accept(endpoint).await;
-        self.status.lock().set_listening(false);
-
-        if let Err(error) = result {
-            self.defmt_tcp_accept_error(&error);
-        } else {
-            self.status.lock().set_connected(true);
-            defmt::info!("TCP Connection accepted!");
-        }
-        result
-    }
-
-    async fn flush_socket(
-        &self,
-        tcp: &mut TcpSocket<'_>,
-    ) -> Result<Result<(), TCPError>, TimeoutError> {
-        let fut = tcp.flush();
-        let result: Result<Result<(), TCPError>, TimeoutError> =
-            with_timeout(Duration::from_secs(1), fut).await;
-        result
-    }
-
-    async fn receive_input(&self, tcp: &mut TcpSocket<'_>) {
-        let mut frametime: FrameTime = FrameTime::new();
+        defmt::info!("Starting Receiving!");
 
         loop {
-            let instant: Instant = Instant::now();
-            let result: Result<InputType, TCPError> = tcp.read_with(Self::read_input).await;
+            defmt::info!("Receiving from buffer..");
+            let result: Result<(usize, UdpMetadata), RecvError> = udp.recv_from(&mut buffer).await;
 
-            if let Ok(input_type) = result {
-                self.ring.lock().add(input_type);
+            if let Ok((size, _src)) = result {
+                if size == UDP_BUFFER {
+                    WIFIController::control_mut().gpio_set(0, led).await;
+                    led = !led;
+                    let input_type: InputType = InputType::from_buffer(&buffer);
+                    self.ring.lock().add(input_type);
+                }
             } else if let Err(error) = result {
-                self.status.lock().set_connected(false);
-                self.defmt_tcp_error(error);
-                break;
+                defmt::info!("Error: {:?}", error);
             }
-            frametime.update(instant);
-            frametime.defmt();
-        }
-    }
-
-    fn read_input(buffer: &mut [u8]) -> (usize, InputType) {
-        defmt::info!("Len: {} | Buffer: {:?}", buffer.len(), buffer);
-        let input_buffer: [u8; UDP_BUFFER] = buffer.try_into().unwrap();
-        let input_type: InputType = InputType::from_buffer(&input_buffer);
-
-        (buffer.len(), input_type)
-    }
-
-    fn defmt_tcp_accept_error(&self, error: &AcceptError) {
-        match error {
-            AcceptError::InvalidState => defmt::info!("AcceptError: InvalidState"),
-            AcceptError::InvalidPort => defmt::info!("AcceptError: InvalidPort"),
-            AcceptError::ConnectionReset => defmt::info!("AcceptError: ConnectionReset"),
-        }
-    }
-
-    fn defmt_tcp_error(&self, error: TCPError) {
-        match error {
-            TCPError::ConnectionReset => defmt::info!("Connecting Reset Error"),
         }
     }
 }
@@ -126,8 +87,7 @@ impl ArchonReceiver {
     pub const fn new() -> Self {
         let status: ArchonStatus = ArchonStatus::new();
         let status: Mutex<ArchonStatus> = Mutex::new(status);
-        let endpoint: ArchonListenEndpoint = ArchonListenEndpoint::default();
-        let endpoint: Mutex<ArchonListenEndpoint> = Mutex::new(endpoint);
+        let endpoint: Mutex<Option<ArchonEndpoint>> = Mutex::new(None);
         let ring: RingBuffer<InputType, INPUT_BUFFER> = RingBuffer::new();
         let ring: Mutex<RingBuffer<InputType, INPUT_BUFFER>> = Mutex::new(ring);
         Self {
@@ -137,17 +97,27 @@ impl ArchonReceiver {
         }
     }
 
-    pub async fn listen(&self) -> Result<(), AcceptError> {
+    pub async fn listen(&self) -> Result<(), UDPError> {
+        let mut rx_meta: [PacketMetadata; UDP_BUFFER] = [PacketMetadata::EMPTY; UDP_BUFFER];
         let mut rx_buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
+        let mut tx_meta: [PacketMetadata; UDP_BUFFER] = [PacketMetadata::EMPTY; UDP_BUFFER];
         let mut tx_buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
-        let mut tcp: TcpSocket<'_> = Self::create_socket(&mut rx_buffer, &mut tx_buffer);
 
-        self.accept_socket(&mut tcp).await?;
-        self.receive_input(&mut tcp).await;
+        let mut udp: UdpSocket<'_> =
+            Self::create_socket(&mut rx_meta, &mut rx_buffer, &mut tx_meta, &mut tx_buffer);
 
-        let _ = self.flush_socket(&mut tcp).await;
-        self.ring.lock().clear();
-        Ok(())
+        if let Some(endpoint) = self.endpoint.lock().as_ref() {
+            let address: IpAddress = endpoint.addr().addr().clone();
+            let port: u16 = endpoint.port();
+            defmt::info!("Addr: {:?} | Port: {}", address, port);
+            udp.bind(IpEndpoint::new(address, port))?;
+
+            self.receive_inputs(&mut udp).await;
+            self.ring.lock().clear();
+            return Ok(());
+        }
+
+        Err(UDPError::BindError(BindError::NoRoute))
     }
 
     pub fn disconnect(&self) {
@@ -158,11 +128,11 @@ impl ArchonReceiver {
         self.ring.lock().take()
     }
 
-    pub fn set_endpoint(&self, endpoint: ArchonListenEndpoint) {
-        *self.endpoint.lock() = endpoint;
+    pub fn set_endpoint(&self, endpoint: ArchonEndpoint) {
+        *self.endpoint.lock() = Some(endpoint);
     }
 
-    pub fn get_endpoint(&self) -> &Mutex<ArchonListenEndpoint> {
+    pub fn get_endpoint(&self) -> &Mutex<Option<ArchonEndpoint>> {
         &self.endpoint
     }
 
