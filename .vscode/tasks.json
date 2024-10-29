@@ -2,6 +2,27 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Archon Transmitter Firmware",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "run",
+                "--profile",
+                "${input:profiles}",
+                "--package",
+                "archon-transmitter",
+                "--config",
+                ".cargo/runners/${input:runner}.toml",
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
             "label": "Archon Receiver Firmware",
             "type": "shell",
             "command": "cargo",
@@ -23,7 +44,7 @@
             }
         },
         {
-            "label": "Archon Transmitter Firmware",
+            "label": "Archon Transmitter Firmware (CustomProbe)",
             "type": "shell",
             "command": "cargo",
             "args": [
@@ -34,6 +55,31 @@
                 "archon-transmitter",
                 "--config",
                 ".cargo/runners/${input:runner}.toml",
+                "--probe",
+                "${input:probe-transmitter}"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Archon Receiver Firmware (CustomProbe)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "run",
+                "--profile",
+                "${input:profiles}",
+                "--package",
+                "archon-receiver",
+                "--config",
+                ".cargo/runners/${input:runner}.toml",
+                "--probe",
+                "${input:probe-receiver}"
             ],
             "problemMatcher": [
                 "$rustc"
@@ -60,7 +106,25 @@
                 "kind": "test",
                 "isDefault": true
             }
-        }
+        },
+        {
+            "label": "Attach Archon Transmitter (CustomProbe)",
+            "type": "shell",
+            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/${input:targets}/archon-transmitter --probe ${input:probe-transmitter}",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Attach Archon Receiver (CustomProbe)",
+            "type": "shell",
+            "command": "probe-rs attach --chip RP2040 --protocol swd ./target/thumbv6m-none-eabi/${input:targets}/archon-receiver --probe ${input:probe-receiver}",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
     ],
     "inputs": [
         {
@@ -93,6 +157,18 @@
                 "uf2",
             ],
             "default": "flash-and-probe",
+        },
+        {
+            "id": "probe-transmitter",
+            "type": "promptString",
+            "description": "Input Probe VID:PID",
+            "default": "2e8a:000c:E66164084366272C",
+        },
+        {
+            "id": "probe-receiver",
+            "type": "promptString",
+            "description": "Input Probe VID:PID:SERIAL",
+            "default": "2e8a:000c:E6626005A7365629",
         }
     ]
 }

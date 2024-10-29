@@ -14,8 +14,8 @@ use embsys::crates::emballoc::Allocator;
 static ALLOCATOR: Allocator<163_840> = Allocator::new();
 
 mod consts;
+mod devices;
 mod entry;
 mod tasks;
 mod tests;
 mod transmitter;
-mod devices;
