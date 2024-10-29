@@ -54,9 +54,7 @@
                 "--package",
                 "archon-transmitter",
                 "--config",
-                ".cargo/runners/${input:runner}.toml",
-                "--probe",
-                "${input:probe-transmitter}"
+                "target.thumbv6m-none-eabi.runner='probe-rs run --chip RP2040 --protocol swd --probe ${input:probe-transmitter}'",
             ],
             "problemMatcher": [
                 "$rustc"
@@ -77,9 +75,7 @@
                 "--package",
                 "archon-receiver",
                 "--config",
-                ".cargo/runners/${input:runner}.toml",
-                "--probe",
-                "${input:probe-receiver}"
+                "target.thumbv6m-none-eabi.runner='probe-rs run --chip RP2040 --protocol swd --probe ${input:probe-receiver}'",
             ],
             "problemMatcher": [
                 "$rustc"
