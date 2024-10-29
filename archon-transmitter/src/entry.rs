@@ -3,7 +3,7 @@ use crate::tests;
 
 use crate::tasks::archon_collect;
 use crate::tasks::archon_send;
-use crate::tasks::wifi_connect_static;
+use crate::tasks::wifi_connect;
 use crate::transmitter::ArchonTransmitter;
 
 use crate::devices::create_dpad_device;
@@ -33,7 +33,7 @@ use embsys::exts::std;
 use embsys::helpers;
 use embsys::setup::SysInit;
 
-use non_std::error::net::TCPError;
+use non_std::error::net::SocketError;
 use std::sync::Mutex;
 use std::vec::Vec;
 
@@ -67,7 +67,7 @@ async fn get_establish_information(
         defmt::info!("State: {:?} | Discovered: {:?}", state, discovered);
         if !discovered.is_empty() {
             if let Some(info) = discovered.last().cloned() {
-                let establish: Result<EstablishInformation, TCPError> =
+                let establish: Result<EstablishInformation, SocketError> =
                     discovery.connect(&info).await;
                 if let Ok(establish) = establish {
                     return establish;
@@ -98,7 +98,7 @@ async fn entry(spawner: Spawner) {
     // tests::test_device_layout().await;
 
     let send_spawner: SendSpawner = spawner.make_send();
-    let wifi_task: Task = Task::new(send_spawner, wifi_connect_static);
+    let wifi_task: Task = Task::new(send_spawner, wifi_connect);
 
     WIFIController::control_mut().gpio_set(0, false).await;
 

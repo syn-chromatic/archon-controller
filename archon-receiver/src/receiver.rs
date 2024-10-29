@@ -61,18 +61,14 @@ impl ArchonReceiver {
 
     async fn receive_inputs(&self, udp: &mut UdpSocket<'_>) {
         let mut buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];
-        let mut led: bool = false;
 
         defmt::info!("Starting Receiving!");
-
         loop {
             defmt::info!("Receiving from buffer..");
             let result: Result<(usize, UdpMetadata), RecvError> = udp.recv_from(&mut buffer).await;
 
             if let Ok((size, _src)) = result {
                 if size == UDP_BUFFER {
-                    WIFIController::control_mut().gpio_set(0, led).await;
-                    led = !led;
                     let input_type: InputType = InputType::from_buffer(&buffer);
                     self.ring.lock().add(input_type);
                 }

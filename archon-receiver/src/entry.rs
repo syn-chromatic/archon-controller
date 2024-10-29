@@ -22,7 +22,7 @@ use embsys::exts::non_std;
 use embsys::helpers;
 use embsys::setup::SysInit;
 
-use non_std::error::net::UDPError;
+use non_std::error::net::SocketError;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
@@ -40,7 +40,7 @@ async fn rp2040_entry(spawner: Spawner) {
     WIFIController::control_mut().gpio_set(0, true).await;
 
     let send_spawner: SendSpawner = spawner.make_send();
-    let wifi_task: Task = Task::new(send_spawner, wifi_connect_static);
+    let wifi_task: Task = Task::new(send_spawner, wifi_connect);
 
     WIFIController::control_mut().gpio_set(0, false).await;
 
@@ -57,7 +57,7 @@ async fn rp2040_entry(spawner: Spawner) {
     WIFIController::control_mut().gpio_set(0, true).await;
 
     let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
-    let result: Result<EstablishInformation, UDPError> = discovery.announce().await;
+    let result: Result<EstablishInformation, SocketError> = discovery.announce().await;
     if let Ok(establish) = result {
         defmt::info!("Establish: {:?}", establish);
         let endpoint: ArchonEndpoint = establish.archon_endpoint();
