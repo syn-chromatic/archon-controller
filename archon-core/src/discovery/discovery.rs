@@ -57,10 +57,8 @@ impl MultiCastDiscovery {
         }
     }
 
-    pub async fn join(&self) -> Result<bool, MulticastError> {
-        WIFIController::stack_ref()
-            .join_multicast_group(self.multicast_addr)
-            .await
+    pub async fn join(&self) -> Result<(), MulticastError> {
+        WIFIController::stack_ref().join_multicast_group(self.multicast_addr)
     }
 
     pub async fn start_discovery(
@@ -92,7 +90,7 @@ impl MultiCastDiscovery {
         let mut tx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
 
         let mut tcp: TcpSocket<'_> =
-            TcpSocket::new(WIFIController::stack_ref(), &mut rx_buffer, &mut tx_buffer);
+            TcpSocket::new(WIFIController::stack(), &mut rx_buffer, &mut tx_buffer);
 
         let tcp_endpoint: IpEndpoint = discovery_info.remote_tcp_endpoint();
         let establish: EstablishInformation =
@@ -114,7 +112,7 @@ impl MultiCastDiscovery {
         let mut tx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
 
         let mut udp: UdpSocket<'_> = UdpSocket::new(
-            WIFIController::stack_ref(),
+            WIFIController::stack(),
             &mut rx_meta,
             &mut rx_buffer,
             &mut tx_meta,
@@ -130,7 +128,7 @@ impl MultiCastDiscovery {
         let mut rx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
         let mut tx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
         let mut tcp: TcpSocket<'_> =
-            TcpSocket::new(WIFIController::stack_ref(), &mut rx_buffer, &mut tx_buffer);
+            TcpSocket::new(WIFIController::stack(), &mut rx_buffer, &mut tx_buffer);
 
         let tcp_port: u16 = 49586;
         let announce_info: AnnounceInformation =

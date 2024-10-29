@@ -49,7 +49,7 @@ impl ArchonReceiver {
     ) -> UdpSocket<'a> {
         defmt::info!("Creating UDP Socket..");
         let udp: UdpSocket = UdpSocket::new(
-            WIFIController::stack_ref(),
+            WIFIController::stack(),
             rx_meta,
             rx_buffer,
             tx_meta,

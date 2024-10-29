@@ -7,10 +7,7 @@ use crate::consts::MC_BUFFER;
 use embsys::crates::defmt;
 use embsys::crates::embassy_futures;
 use embsys::crates::embassy_net;
-use embsys::crates::smoltcp;
 use embsys::drivers::hardware;
-
-use smoltcp::wire::IpVersion;
 
 use embassy_net::udp::BindError;
 use embassy_net::udp::PacketMetadata;
@@ -26,7 +23,7 @@ pub(in crate::discovery) static STATUS: DiscoveryStatus = DiscoveryStatus::new()
 pub(in crate::discovery) fn _get_local_addr() -> [u8; 4] {
     let config: Option<StaticConfigV4> = WIFIController::borrow_mut().get_config_v4();
     if let Some(config) = config {
-        let addr: [u8; 4] = config.address.address().0;
+        let addr: [u8; 4] = config.address.address().octets();
         return addr;
     }
     [0, 0, 0, 0]
@@ -39,7 +36,7 @@ pub(in crate::discovery) async fn _udp_discovery() -> Result<(), BindError> {
     let mut tx_buffer: [u8; MC_BUFFER] = [0; MC_BUFFER];
 
     let mut udp: UdpSocket<'_> = UdpSocket::new(
-        WIFIController::stack_ref(),
+        WIFIController::stack(),
         &mut rx_meta,
         &mut rx_buffer,
         &mut tx_meta,
@@ -63,9 +60,9 @@ pub(in crate::discovery) async fn _udp_discovery_loop(
                 defmt::info!("{:?}", buf);
                 let addr: IpAddress = _src.endpoint.addr;
 
-                match addr.version() {
-                    IpVersion::Ipv4 => {
-                        let remote_addr: [u8; 4] = addr.as_bytes().try_into().unwrap();
+                match addr {
+                    IpAddress::Ipv4(ipv4_addr) => {
+                        let remote_addr: [u8; 4] = ipv4_addr.octets();
                         let local_addr: [u8; 4] = _get_local_addr();
 
                         let announce_info: AnnounceInformation =
@@ -75,6 +72,7 @@ pub(in crate::discovery) async fn _udp_discovery_loop(
 
                         STATUS.push(discovery_info);
                     }
+                    IpAddress::Ipv6(_ipv6_addr) => todo!(),
                 }
             }
             Err(e) => {
