@@ -34,10 +34,10 @@ pub async fn archon_collect(_s: TaskState) {
 
 #[embassy_executor::task]
 pub async fn wifi_connect(_s: TaskState) {
-    let wifi_controller: &mut WIFIController = WIFIController::borrow_mut();
+    let wifi_controller: &mut WIFIController = WIFIController::as_mut();
 
     let psk: [u8; 32] = WpaPsk::new().derive_psk(WIFI_SSID, WIFI_PASS);
-    let timeout: Duration = Duration::from_secs(30);
+    let timeout: Duration = Duration::from_secs(60);
     let _ = wifi_controller
         .join_wpa2_psk(WIFI_SSID, &psk, timeout)
         .await;
@@ -45,7 +45,7 @@ pub async fn wifi_connect(_s: TaskState) {
 
 #[embassy_executor::task]
 pub async fn wifi_connect_static(_s: TaskState) {
-    let wifi_controller: &mut WIFIController = WIFIController::borrow_mut();
+    let wifi_controller: &mut WIFIController = WIFIController::as_mut();
 
     let psk: [u8; 32] = WpaPsk::new().derive_psk(WIFI_SSID, WIFI_PASS);
     let address: Ipv4Cidr = Ipv4Cidr::new(Ipv4Address::new(192, 168, 0, 160), 24);

@@ -17,6 +17,7 @@ use embsys::crates::cortex_m_rt;
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
+use embsys::crates::embassy_net;
 use embsys::drivers::hardware::WIFIController;
 use embsys::exts::non_std;
 use embsys::helpers;
@@ -26,6 +27,7 @@ use non_std::error::net::SocketError;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
+use embassy_net::StaticConfigV4;
 
 use helpers::task_handler::Task;
 
@@ -48,7 +50,7 @@ async fn rp2040_entry(spawner: Spawner) {
     let _ = wifi_task.start();
     wifi_task.wait().await;
 
-    let config_v4 = WIFIController::borrow_mut().get_config_v4();
+    let config_v4: Option<StaticConfigV4> = WIFIController::as_mut().get_config_v4();
     if let Some(config_v4) = config_v4 {
         let address = config_v4.address;
         defmt::info!("ADDRESS: {:?}", address);
@@ -71,7 +73,23 @@ async fn rp2040_entry(spawner: Spawner) {
             embassy_futures::yield_now().await;
             let input_type: Option<InputType> = ArchonReceiver::read_lock().take();
             if let Some(input_type) = input_type {
-                input_type.defmt();
+                match input_type {
+                    InputType::DPad(dpad) => {
+                        dpad.defmt();
+                    }
+                    InputType::JoyStick(joystick) => {
+                        // joystick.defmt();
+                    }
+                    InputType::ASCII(input_ascii) => {
+                        input_ascii.defmt();
+                    }
+                    InputType::Rotary(rotary) => {
+                        // rotary.defmt();
+                    }
+                    InputType::Button(button) => {
+                        button.defmt();
+                    }
+                }
             }
         }
     } else if let Err(error) = result {

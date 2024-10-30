@@ -21,7 +21,7 @@ use hardware::WIFIController;
 pub(in crate::discovery) static STATUS: DiscoveryStatus = DiscoveryStatus::new();
 
 pub(in crate::discovery) fn _get_local_addr() -> [u8; 4] {
-    let config: Option<StaticConfigV4> = WIFIController::borrow_mut().get_config_v4();
+    let config: Option<StaticConfigV4> = WIFIController::as_mut().get_config_v4();
     if let Some(config) = config {
         let addr: [u8; 4] = config.address.address().octets();
         return addr;

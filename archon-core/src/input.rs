@@ -43,41 +43,19 @@ impl InputType {
     pub fn defmt(&self) {
         match &self {
             InputType::DPad(dpad) => {
-                let id: u8 = dpad.id();
-                let name: &str = dpad.dpad().as_str();
-                let state: &ButtonState = dpad.state();
-                defmt::info!(
-                    "DPAD -> ID: {:?} | DIR: {:?} | STATE: {} | DURATION: {}",
-                    id,
-                    name,
-                    state.pressed(),
-                    state.duration()
-                );
+                dpad.defmt();
             }
             InputType::JoyStick(joystick) => {
-                let id: u8 = joystick.id();
-                let xy: (u16, u16) = joystick.xy();
-                defmt::info!("JOYSTICK -> ID: {:?} | XY: {:?}", id, xy);
+                joystick.defmt();
             }
             InputType::ASCII(input_ascii) => {
-                let id: u8 = input_ascii.id();
-                let c: char = input_ascii.char();
-                defmt::info!("ASCII -> ID: {:?} | ASCII: {:?}", id, c);
+                input_ascii.defmt();
             }
             InputType::Rotary(rotary) => {
-                let id: u8 = rotary.id();
-                let v: u16 = rotary.value();
-                defmt::info!("ROTARY -> ID: {:?} | VALUE: {:?} ", id, v);
+                rotary.defmt();
             }
             InputType::Button(button) => {
-                let id: u8 = button.id();
-                let state: &ButtonState = button.state();
-                defmt::info!(
-                    "BUTTON -> ID: {:?} | STATE: {} | DURATION: {}",
-                    id,
-                    state.pressed(),
-                    state.duration()
-                );
+                button.defmt();
             }
         }
     }
@@ -206,6 +184,19 @@ impl InputDPad {
     pub fn state(&self) -> &ButtonState {
         &self.state
     }
+
+    pub fn defmt(&self) {
+        let id: u8 = self.id();
+        let name: &str = self.dpad().as_str();
+        let state: &ButtonState = self.state();
+        defmt::info!(
+            "DPAD -> ID: {:?} | DIR: {:?} | STATE: {} | DURATION: {}",
+            id,
+            name,
+            state.pressed(),
+            state.duration()
+        );
+    }
 }
 
 pub struct InputJoyStick {
@@ -267,6 +258,12 @@ impl InputJoyStick {
     pub fn y(&self) -> u16 {
         self.y
     }
+
+    pub fn defmt(&self) {
+        let id: u8 = self.id();
+        let xy: (u16, u16) = self.xy();
+        defmt::info!("JOYSTICK -> ID: {:?} | XY: {:?}", id, xy);
+    }
 }
 
 pub struct InputASCII {
@@ -312,6 +309,12 @@ impl InputASCII {
     pub fn char(&self) -> char {
         self.char
     }
+
+    pub fn defmt(&self) {
+        let id: u8 = self.id();
+        let c: char = self.char();
+        defmt::info!("ASCII -> ID: {:?} | ASCII: {:?}", id, c);
+    }
 }
 
 pub struct InputRotary {
@@ -356,6 +359,12 @@ impl InputRotary {
 
     pub fn value(&self) -> u16 {
         self.value
+    }
+
+    pub fn defmt(&self) {
+        let id: u8 = self.id();
+        let v: u16 = self.value();
+        defmt::info!("ROTARY -> ID: {:?} | VALUE: {:?} ", id, v);
     }
 }
 
@@ -408,5 +417,16 @@ impl InputButton {
 
     pub fn state(&self) -> &ButtonState {
         &self.state
+    }
+
+    pub fn defmt(&self) {
+        let id: u8 = self.id();
+        let state: &ButtonState = self.state();
+        defmt::info!(
+            "BUTTON -> ID: {:?} | STATE: {} | DURATION: {}",
+            id,
+            state.pressed(),
+            state.duration()
+        );
     }
 }
