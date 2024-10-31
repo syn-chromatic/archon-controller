@@ -41,7 +41,10 @@ pub async fn create_joystick_device() -> JoyStickDevice {
     let polling: DevicePolling = DevicePolling::new(Duration::from_millis(10));
     let mut conf: JoyStickConfiguration = JoyStickConfiguration::new(origin, polling);
 
-    let ema_filter: JoyStickFilter = JoyStickFilter::ema(20);
+    let interpolation_filter: JoyStickFilter =
+        JoyStickFilter::linear_interpolation(50, 4050, 50, 4050);
+    let ema_filter: JoyStickFilter = JoyStickFilter::ema(5);
+    conf.add_filter(interpolation_filter);
     conf.add_filter(ema_filter);
 
     let mut joystick_device: JoyStickDevice = JoyStickDevice::new(0, adc, conf);
