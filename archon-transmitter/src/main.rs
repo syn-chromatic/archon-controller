@@ -6,6 +6,7 @@
 #![feature(arbitrary_self_types)]
 #![feature(trait_alias)]
 #![feature(impl_trait_in_assoc_type)]
+#![allow(static_mut_refs)]
 
 extern crate embsys;
 use embsys::crates::emballoc::Allocator;
@@ -15,6 +16,7 @@ static ALLOCATOR: Allocator<163_840> = Allocator::new();
 
 mod consts;
 mod devices;
+mod display;
 mod entry;
 mod tasks;
 mod tests;

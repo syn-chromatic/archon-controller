@@ -13,7 +13,7 @@ bench = false
 
 [dependencies.embsys]
 git = "https://github.com/syn-chromatic/embsys-rs.git"
-rev = "55a92f18a71346fe8eb9698571d525c736ab6299"
+rev = "27e7bc3a5d9a7ab83c3ea42e670d90af0b0d36c3"
 package = "embsys"
 features = ["rp2040-probe"]
 

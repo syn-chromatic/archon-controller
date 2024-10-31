@@ -96,6 +96,7 @@ async fn entry(spawner: Spawner) {
     // tests::dpad_test();
     // tests::button_test().await;
     // tests::test_device_layout().await;
+    tests::test_display_menu().await;
 
     let send_spawner: SendSpawner = spawner.make_send();
     let wifi_task: Task = Task::new(send_spawner, wifi_connect);
