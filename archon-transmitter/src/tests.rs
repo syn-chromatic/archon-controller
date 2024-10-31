@@ -1,10 +1,14 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use embsys::crates::defmt;
 use embsys::crates::embedded_graphics;
+use embsys::drivers::hardware::HWController;
+use embsys::drivers::hardware::WIFIController;
 use embsys::exts::std;
 
 use std::cell::Cell;
+use std::format;
 use std::string::String;
 use std::string::ToString;
 use std::sync::Arc;
@@ -110,7 +114,35 @@ impl SelectValue for U16Value {
     }
 }
 
+#[derive(Clone, PartialEq)]
+pub struct F32Value {
+    value: f32,
+    value_str: String,
+}
+
+impl F32Value {
+    pub fn new(value: f32) -> Self {
+        Self {
+            value,
+            value_str: format!("{:.2}", value),
+        }
+    }
+}
+
+impl From<f32> for F32Value {
+    fn from(value: f32) -> Self {
+        F32Value::new(value)
+    }
+}
+
+impl SelectValue for F32Value {
+    fn marker(&self) -> &str {
+        &self.value_str
+    }
+}
+
 pub struct InputState {
+    sys_voltage: F32Value,
     dpad_up: ButtonEnum,
     dpad_right: ButtonEnum,
     dpad_down: ButtonEnum,
@@ -120,8 +152,15 @@ pub struct InputState {
     rotary: U16Value,
 }
 
-impl From<&Vec<InputType>> for InputState {
-    fn from(inputs: &Vec<InputType>) -> Self {
+impl InputState {
+    async fn get_sys_voltage() -> F32Value {
+        WIFIController::control_mut().gpio_set(0, false).await;
+        let sys_voltage: f32 = HWController::sys_voltage_blocking().unwrap();
+        F32Value::new(sys_voltage)
+    }
+
+    async fn from_inputs(inputs: &Vec<InputType>) -> Self {
+        let sys_voltage: F32Value = Self::get_sys_voltage().await;
         let mut dpad_up: ButtonEnum = ButtonEnum::OFF;
         let mut dpad_right: ButtonEnum = ButtonEnum::OFF;
         let mut dpad_down: ButtonEnum = ButtonEnum::OFF;
@@ -151,6 +190,7 @@ impl From<&Vec<InputType>> for InputState {
         }
 
         InputState {
+            sys_voltage,
             dpad_up,
             dpad_right,
             dpad_down,
@@ -180,19 +220,16 @@ pub async fn test_display_menu() {
     let mut display: GraphicsDisplay<SPIMode<'_>> = setup_display();
     let mut state: MenuState<_, _, _> = Default::default();
 
-    let style: MenuStyle<
-        AnimatedTriangle,
-        Programmed,
-        embedded_menu::selection_indicator::StaticPosition,
-        (),
-        MenuTheme,
-    > = MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
+    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
+        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
 
     loop {
+        defmt::info!("{:?}", HWController::raw_sys_voltage_blocking().unwrap());
         let inputs: Vec<InputType> = layout.get_inputs().await;
-        let input_state: InputState = (&inputs).into();
+        let input_state: InputState = InputState::from_inputs(&inputs).await;
 
         let mut menu = Menu::with_style("Menu Title", style)
+            .add_item(" SYS VOLTAGE", input_state.sys_voltage, |_| ())
             .add_item(" DPAD UP", input_state.dpad_up, |_| ())
             .add_item(" DPAD RIGHT", input_state.dpad_right, |_| ())
             .add_item(" DPAD DOWN", input_state.dpad_down, |_| ())
