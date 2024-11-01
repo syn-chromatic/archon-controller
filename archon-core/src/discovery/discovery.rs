@@ -9,6 +9,7 @@ use super::structures::EstablishInformation;
 use crate::consts::MC_BUFFER;
 
 use embsys::crates::embassy_executor;
+use embsys::crates::embassy_futures;
 use embsys::crates::embassy_net;
 use embsys::crates::embassy_time;
 use embsys::drivers::hardware;
@@ -67,9 +68,11 @@ impl MultiCastDiscovery {
     ) -> Result<&DiscoveryStatus, SpawnError> {
         #[embassy_executor::task]
         async fn start_discovery_task() {
+            STATUS.set_activity(true);
             STATUS.set_enabled();
             with_cancel(_udp_discovery(), _udp_cancel_discovery()).await;
             STATUS.clear();
+            STATUS.set_activity(false);
         }
 
         spawner.spawn(start_discovery_task())?;
@@ -78,6 +81,9 @@ impl MultiCastDiscovery {
 
     pub async fn stop_discovery(&self) {
         STATUS.set_disabled();
+        while STATUS.activity() {
+            embassy_futures::yield_now().await;
+        }
     }
 
     pub async fn connect(

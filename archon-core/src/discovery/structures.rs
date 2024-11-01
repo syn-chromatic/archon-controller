@@ -188,13 +188,19 @@ impl EstablishInformation {
 pub struct DiscoveryStatus {
     discovered: Mutex<Vec<DiscoveryInformation>>,
     state: Mutex<bool>,
+    activity: Mutex<bool>,
 }
 
 impl DiscoveryStatus {
     pub const fn new() -> Self {
         let discovered: Mutex<Vec<DiscoveryInformation>> = Mutex::new(Vec::new());
         let state: Mutex<bool> = Mutex::new(false);
-        Self { discovered, state }
+        let activity: Mutex<bool> = Mutex::new(false);
+        Self {
+            discovered,
+            state,
+            activity,
+        }
     }
 
     pub fn discovered(&self) -> Vec<DiscoveryInformation> {
@@ -208,6 +214,10 @@ impl DiscoveryStatus {
     pub fn state(&self) -> bool {
         *self.state.lock()
     }
+
+    pub fn activity(&self) -> bool {
+        *self.activity.lock()
+    }
 }
 
 impl DiscoveryStatus {
@@ -217,6 +227,10 @@ impl DiscoveryStatus {
 
     pub(in crate::discovery) fn set_disabled(&self) {
         *self.state.lock() = false;
+    }
+
+    pub(in crate::discovery) fn set_activity(&self, state: bool) {
+        *self.activity.lock() = state;
     }
 
     pub(in crate::discovery) fn push(&self, info: DiscoveryInformation) {

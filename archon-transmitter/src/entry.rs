@@ -4,7 +4,6 @@ use crate::tests;
 use crate::tasks::archon_collect;
 use crate::tasks::archon_send;
 use crate::tasks::wifi_connect;
-use crate::tasks::wifi_connect_static;
 use crate::transmitter::ArchonTransmitter;
 
 use crate::devices::create_dpad_device;
@@ -12,6 +11,8 @@ use crate::devices::create_joystick_button_device;
 use crate::devices::create_joystick_device;
 use crate::devices::create_l1_button_device;
 use crate::devices::create_rotary_device;
+
+use crate::menu::display_menu;
 
 use archon_core::devices::button::ButtonDevice;
 use archon_core::devices::dpad::DPadDevice;
@@ -116,25 +117,25 @@ async fn entry(spawner: Spawner) {
 
     WIFIController::control_mut().gpio_set(0, true).await;
 
-    tests::test_display_menu(send_spawner).await;
+    display_menu(send_spawner).await;
 
-    let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
-    let _ = discovery.join().await;
-    let status: &DiscoveryStatus = discovery.start_discovery(&send_spawner).await.unwrap();
-    let establish: EstablishInformation = get_establish_information(&discovery, status).await;
-    discovery.stop_discovery().await;
+    // let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
+    // let _ = discovery.join().await;
+    // let status: &DiscoveryStatus = discovery.start_discovery(&send_spawner).await.unwrap();
+    // let establish: EstablishInformation = get_establish_information(&discovery, status).await;
+    // discovery.stop_discovery().await;
 
-    let endpoint: ArchonEndpoint = establish.archon_endpoint();
+    // let endpoint: ArchonEndpoint = establish.archon_endpoint();
 
-    ArchonTransmitter::read_lock().set_endpoint(endpoint);
+    // ArchonTransmitter::read_lock().set_endpoint(endpoint);
 
-    set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
+    // set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
 
-    defmt::info!("Archon Collecting..");
-    let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
-    let _ = archon_collect_task.start();
+    // defmt::info!("Archon Collecting..");
+    // let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
+    // let _ = archon_collect_task.start();
 
-    defmt::info!("Archon Sending..");
-    let archon_send_task: Task = Task::new(send_spawner, archon_send);
-    let _ = archon_send_task.start();
+    // defmt::info!("Archon Sending..");
+    // let archon_send_task: Task = Task::new(send_spawner, archon_send);
+    // let _ = archon_send_task.start();
 }
