@@ -218,25 +218,91 @@ pub async fn test_display_menu() {
     layout.add_button(l1_button_device);
 
     let mut display: GraphicsDisplay<SPIMode<'_>> = setup_display();
-    let mut state: MenuState<_, _, _> = Default::default();
 
+    main_display_menu(&mut display, &mut layout).await;
+}
+
+#[derive(Copy, Clone)]
+pub enum MainMenu {
+    Discovery,
+    Settings,
+    Diagnostics,
+}
+
+pub async fn main_display_menu(
+    display: &mut GraphicsDisplay<SPIMode<'_>>,
+    layout: &mut DeviceLayout,
+) {
+    let mut state: MenuState<_, _, _> = Default::default();
     let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
         MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
 
     loop {
-        defmt::info!("{:?}", HWController::raw_sys_voltage_blocking().unwrap());
+        let inputs: Vec<InputType> = layout.get_inputs().await;
+
+        let mut menu = Menu::with_style("Main Menu", style)
+            .add_item(" Discovery", ">", |_| MainMenu::Discovery)
+            .add_item(" Settings", ">", |_| MainMenu::Settings)
+            .add_item(" Diagnostics", ">", |_| MainMenu::Diagnostics)
+            .build_with_state(state);
+
+        menu.update(display.get());
+        menu.draw(display.get()).unwrap();
+
+        display.get().flush();
+        display.get().clear(false);
+
+        for input in inputs {
+            match input {
+                InputType::DPad(input_dpad) => match input_dpad.dpad() {
+                    DPad::Up => {
+                        menu.interact(Interaction::Navigation(Navigation::Previous));
+                    }
+                    DPad::Right => {
+                        let val = menu.interact(Interaction::Action(Action::Select));
+                        if let Some(val) = val {
+                            match val {
+                                MainMenu::Discovery => {}
+                                MainMenu::Settings => {}
+                                MainMenu::Diagnostics => {
+                                    diag_display_menu(display, layout).await;
+                                }
+                            }
+                        }
+                    }
+                    DPad::Down => {
+                        menu.interact(Interaction::Navigation(Navigation::Next));
+                    }
+                    DPad::Left => {}
+                },
+                _ => {}
+            }
+        }
+        state = menu.state();
+    }
+}
+
+pub async fn diag_display_menu(
+    display: &mut GraphicsDisplay<SPIMode<'_>>,
+    layout: &mut DeviceLayout,
+) {
+    let mut state: MenuState<_, _, _> = Default::default();
+    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
+        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
+
+    loop {
         let inputs: Vec<InputType> = layout.get_inputs().await;
         let input_state: InputState = InputState::from_inputs(&inputs).await;
 
-        let mut menu = Menu::with_style("Menu Title", style)
-            .add_item(" SYS VOLTAGE", input_state.sys_voltage, |_| ())
-            .add_item(" DPAD UP", input_state.dpad_up, |_| ())
-            .add_item(" DPAD RIGHT", input_state.dpad_right, |_| ())
-            .add_item(" DPAD DOWN", input_state.dpad_down, |_| ())
-            .add_item(" DPAD LEFT", input_state.dpad_left, |_| ())
-            .add_item(" JOYSTICK X", input_state.joystick_x, |_| ())
-            .add_item(" JOYSTICK Y", input_state.joystick_y, |_| ())
-            .add_item(" ROTARY", input_state.rotary, |_| ())
+        let mut menu = Menu::with_style("Diagnostics", style)
+            .add_item(" SYS VOLTAGE", input_state.sys_voltage, |_| 0)
+            .add_item(" DPAD UP", input_state.dpad_up, |_| 1)
+            .add_item(" DPAD RIGHT", input_state.dpad_right, |_| 2)
+            .add_item(" DPAD DOWN", input_state.dpad_down, |_| 3)
+            .add_item(" DPAD LEFT", input_state.dpad_left, |_| 4)
+            .add_item(" JOYSTICK X", input_state.joystick_x, |_| 5)
+            .add_item(" JOYSTICK Y", input_state.joystick_y, |_| 6)
+            .add_item(" ROTARY", input_state.rotary, |_| 7)
             .build_with_state(state);
 
         menu.update(display.get());
@@ -258,13 +324,10 @@ pub async fn test_display_menu() {
                         menu.interact(Interaction::Navigation(Navigation::Next));
                     }
                     DPad::Left => {
-                        menu.interact(Interaction::Action(Action::Return(())));
+                        return;
                     }
                 },
-                InputType::JoyStick(input_joy_stick) => {}
-                InputType::ASCII(input_ascii) => {}
-                InputType::Rotary(input_rotary) => {}
-                InputType::Button(input_button) => {}
+                _ => {}
             }
         }
         state = menu.state();
