@@ -4,6 +4,7 @@ use crate::tests;
 use crate::tasks::archon_collect;
 use crate::tasks::archon_send;
 use crate::tasks::wifi_connect;
+use crate::tasks::wifi_connect_static;
 use crate::transmitter::ArchonTransmitter;
 
 use crate::devices::create_dpad_device;
@@ -96,7 +97,7 @@ async fn entry(spawner: Spawner) {
     // tests::dpad_test();
     // tests::button_test().await;
     // tests::test_device_layout().await;
-    tests::test_display_menu().await;
+    // tests::test_display_menu().await;
 
     let send_spawner: SendSpawner = spawner.make_send();
     let wifi_task: Task = Task::new(send_spawner, wifi_connect);
@@ -114,6 +115,8 @@ async fn entry(spawner: Spawner) {
     }
 
     WIFIController::control_mut().gpio_set(0, true).await;
+
+    tests::test_display_menu(send_spawner).await;
 
     let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
     let _ = discovery.join().await;

@@ -2,6 +2,8 @@
 #![allow(unused_imports)]
 
 use embsys::crates::defmt;
+use embsys::crates::embassy_executor;
+use embsys::crates::embassy_futures;
 use embsys::crates::embedded_graphics;
 use embsys::drivers::hardware::HWController;
 use embsys::drivers::hardware::WIFIController;
@@ -14,6 +16,9 @@ use std::string::ToString;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::vec::Vec;
+
+use embassy_executor::SendSpawner;
+use embassy_executor::Spawner;
 
 use embedded_graphics::Drawable;
 use embedded_menu::interaction::programmed::Programmed;
@@ -38,6 +43,10 @@ use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::layout::DeviceLayout;
 use archon_core::devices::rotary::RotaryDevice;
+use archon_core::discovery::DiscoveryInformation;
+use archon_core::discovery::DiscoveryStatus;
+use archon_core::discovery::EstablishInformation;
+use archon_core::discovery::MultiCastDiscovery;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
@@ -202,7 +211,7 @@ impl InputState {
     }
 }
 
-pub async fn test_display_menu() {
+pub async fn test_display_menu(spawner: SendSpawner) {
     let mut layout: DeviceLayout = DeviceLayout::new();
 
     let dpad_device: DPadDevice = create_dpad_device();
@@ -219,7 +228,7 @@ pub async fn test_display_menu() {
 
     let mut display: GraphicsDisplay<SPIMode<'_>> = setup_display();
 
-    main_display_menu(&mut display, &mut layout).await;
+    main_display_menu(spawner, &mut display, &mut layout).await;
 }
 
 #[derive(Copy, Clone)]
@@ -230,6 +239,7 @@ pub enum MainMenu {
 }
 
 pub async fn main_display_menu(
+    spawner: SendSpawner,
     display: &mut GraphicsDisplay<SPIMode<'_>>,
     layout: &mut DeviceLayout,
 ) {
@@ -262,7 +272,9 @@ pub async fn main_display_menu(
                         let val = menu.interact(Interaction::Action(Action::Select));
                         if let Some(val) = val {
                             match val {
-                                MainMenu::Discovery => {}
+                                MainMenu::Discovery => {
+                                    discovery_display_menu(spawner, display, layout).await;
+                                }
                                 MainMenu::Settings => {}
                                 MainMenu::Diagnostics => {
                                     diag_display_menu(display, layout).await;
@@ -278,6 +290,70 @@ pub async fn main_display_menu(
                 _ => {}
             }
         }
+        state = menu.state();
+    }
+}
+
+pub async fn discovery_display_menu(
+    spawner: SendSpawner,
+    display: &mut GraphicsDisplay<SPIMode<'_>>,
+    layout: &mut DeviceLayout,
+) {
+    let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
+    let _ = discovery.join().await;
+    let status: &DiscoveryStatus = discovery.start_discovery(&spawner).await.unwrap();
+
+    let mut state: MenuState<_, _, _> = Default::default();
+    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
+        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
+
+    loop {
+        embassy_futures::yield_now().await;
+        let inputs: Vec<InputType> = layout.get_inputs().await;
+
+        let discovered: Vec<DiscoveryInformation> = status.discovered();
+
+        let items: Vec<_> = (0..discovered.len())
+            .map(|i| {
+                MenuItem::new(
+                    " ".to_string() + discovered.get(i).unwrap().announce_info().name(),
+                    ">",
+                )
+            })
+            .collect();
+
+        let mut menu = Menu::with_style("Discvery", style)
+            .add_section_title("--  Devices  --")
+            .add_menu_items(items)
+            .build_with_state(state);
+
+        menu.update(display.get());
+        menu.draw(display.get()).unwrap();
+
+        display.get().flush();
+        display.get().clear(false);
+
+        for input in inputs {
+            match input {
+                InputType::DPad(input_dpad) => match input_dpad.dpad() {
+                    DPad::Up => {
+                        menu.interact(Interaction::Navigation(Navigation::Previous));
+                    }
+                    DPad::Right => {
+                        menu.interact(Interaction::Action(Action::Select));
+                    }
+                    DPad::Down => {
+                        menu.interact(Interaction::Navigation(Navigation::Next));
+                    }
+                    DPad::Left => {
+                        discovery.stop_discovery().await;
+                        return;
+                    }
+                },
+                _ => {}
+            }
+        }
+
         state = menu.state();
     }
 }

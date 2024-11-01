@@ -9,6 +9,7 @@ use embsys::exts::std;
 use std::string::String;
 use std::string::ToString;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
 use std::vec::Vec;
 
 use defmt::Format;
@@ -95,6 +96,9 @@ impl AnnounceInformation {
     fn ascii_be_to_string(buffer: &[u8]) -> String {
         let mut string: String = String::new();
         for value in buffer.iter() {
+            if *value == 0 {
+                break;
+            }
             string.push(*value as char);
         }
         string
@@ -216,7 +220,16 @@ impl DiscoveryStatus {
     }
 
     pub(in crate::discovery) fn push(&self, info: DiscoveryInformation) {
-        self.discovered.lock().push(info);
+        let mut discovered: MutexGuard<Vec<DiscoveryInformation>> = self.discovered.lock();
+
+        if let Some(existing_info) = discovered
+            .iter_mut()
+            .find(|existing_info| existing_info.remote_addr() == info.remote_addr())
+        {
+            *existing_info = info;
+        } else {
+            discovered.push(info);
+        }
     }
 
     pub(in crate::discovery) fn clear(&self) {
