@@ -107,7 +107,7 @@ async fn entry(spawner: Spawner) {
 
     defmt::info!("Initializing Startup Tasks..");
     let _ = wifi_task.start();
-    wifi_task.wait().await;
+    // wifi_task.wait().await;
 
     let config_v4 = WIFIController::as_mut().get_config_v4();
     if let Some(config_v4) = config_v4 {

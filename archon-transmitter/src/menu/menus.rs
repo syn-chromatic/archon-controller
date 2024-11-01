@@ -1,12 +1,14 @@
 use super::structures::InputState;
+use super::structures::InputStateEnum;
 use super::structures::MainMenu;
+use super::utils::discovery_to_menu_items;
 
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
 use embsys::crates::embedded_graphics;
 use embsys::exts::std;
 
-use std::string::ToString;
+use std::string::String;
 use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
@@ -78,9 +80,7 @@ pub async fn main_display_menu(
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
         let mut menu = Menu::with_style("Main Menu", style)
-            .add_item(" Discovery", ">", |_| MainMenu::Discovery)
-            .add_item(" Settings", ">", |_| MainMenu::Settings)
-            .add_item(" Diagnostics", ">", |_| MainMenu::Diagnostics)
+            .add_menu_items(MainMenu::to_menu_items())
             .build_with_state(state);
 
         menu.update(display.get());
@@ -139,19 +139,7 @@ pub async fn discovery_display_menu(
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
         let discovered: Vec<DiscoveryInformation> = status.discovered();
-
-        let mut items: Vec<_> = (0..discovered.len())
-            .map(|i| {
-                MenuItem::new(
-                    " ".to_string() + discovered.get(i).unwrap().announce_info().name(),
-                    ">",
-                )
-            })
-            .collect();
-
-        if items.len() == 0 {
-            items.push(MenuItem::new(" No Devices..".to_string(), ""));
-        }
+        let items: Vec<MenuItem<String, (), &str, true>> = discovery_to_menu_items(&discovered);
 
         let mut menu = Menu::with_style("Discovery", style)
             .add_menu_items(items)
@@ -199,16 +187,10 @@ pub async fn diagnostics_display_menu(
     loop {
         let inputs: Vec<InputType> = layout.get_inputs().await;
         let input_state: InputState = InputState::from_inputs(&inputs).await;
+        let items: Vec<MenuItem<&str, (), InputStateEnum, true>> = input_state.to_menu_items();
 
         let mut menu = Menu::with_style("Diagnostics", style)
-            .add_item(" SYS VOLTAGE", input_state.sys_voltage, |_| 0)
-            .add_item(" DPAD UP", input_state.dpad_up, |_| 1)
-            .add_item(" DPAD RIGHT", input_state.dpad_right, |_| 2)
-            .add_item(" DPAD DOWN", input_state.dpad_down, |_| 3)
-            .add_item(" DPAD LEFT", input_state.dpad_left, |_| 4)
-            .add_item(" JOYSTICK X", input_state.joystick_x, |_| 5)
-            .add_item(" JOYSTICK Y", input_state.joystick_y, |_| 6)
-            .add_item(" ROTARY", input_state.rotary, |_| 7)
+            .add_menu_items(items)
             .build_with_state(state);
 
         menu.update(display.get());
