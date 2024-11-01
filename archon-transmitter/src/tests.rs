@@ -313,7 +313,7 @@ pub async fn discovery_display_menu(
 
         let discovered: Vec<DiscoveryInformation> = status.discovered();
 
-        let items: Vec<_> = (0..discovered.len())
+        let mut items: Vec<_> = (0..discovered.len())
             .map(|i| {
                 MenuItem::new(
                     " ".to_string() + discovered.get(i).unwrap().announce_info().name(),
@@ -322,8 +322,11 @@ pub async fn discovery_display_menu(
             })
             .collect();
 
-        let mut menu = Menu::with_style("Discvery", style)
-            .add_section_title("--  Devices  --")
+        if items.len() == 0 {
+            items.push(MenuItem::new(" No Devices..".to_string(), ""));
+        }
+
+        let mut menu = Menu::with_style("Discovery", style)
             .add_menu_items(items)
             .build_with_state(state);
 
