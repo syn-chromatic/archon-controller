@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use super::polling::DevicePolling;
 use crate::input::ButtonState;
 use crate::input::InputButton;
 use crate::input::InputType;
@@ -19,21 +18,14 @@ use embassy_rp::gpio::AnyPin;
 use hardware::get_pin;
 
 pub struct ButtonConfiguration {
-    polling: DevicePolling,
     bounce: Duration,
     repeat: Duration,
     repeat_hold: Duration,
 }
 
 impl ButtonConfiguration {
-    pub fn new(
-        polling: DevicePolling,
-        bounce: Duration,
-        repeat: Duration,
-        repeat_hold: Duration,
-    ) -> Self {
+    pub const fn new(bounce: Duration, repeat: Duration, repeat_hold: Duration) -> Self {
         Self {
-            polling,
             bounce,
             repeat,
             repeat_hold,

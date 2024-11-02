@@ -138,7 +138,7 @@ impl ArchonTransmitter {
 }
 
 impl ArchonTransmitter {
-    pub fn read_lock<'a>() -> RwLockReadGuard<'a, ArchonTransmitter> {
+    pub fn read_lock() -> RwLockReadGuard<'static, ArchonTransmitter> {
         ARCHON.read()
     }
 

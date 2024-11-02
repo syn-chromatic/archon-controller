@@ -6,19 +6,10 @@ use crate::tasks::archon_send;
 use crate::tasks::wifi_connect;
 use crate::transmitter::ArchonTransmitter;
 
-use crate::devices::create_dpad_device;
-use crate::devices::create_joystick_button_device;
-use crate::devices::create_joystick_device;
-use crate::devices::create_l1_button_device;
-use crate::devices::create_rotary_device;
+use crate::devices::DevicesBuilder;
 
 use crate::menu::display_menu;
 
-use archon_core::devices::button::ButtonDevice;
-use archon_core::devices::dpad::DPadDevice;
-use archon_core::devices::joystick::JoyStickDevice;
-use archon_core::devices::layout::DeviceLayout;
-use archon_core::devices::rotary::RotaryDevice;
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
 use archon_core::discovery::EstablishInformation;
@@ -36,27 +27,12 @@ use embsys::helpers;
 use embsys::setup::SysInit;
 
 use non_std::error::net::SocketError;
-use std::sync::Mutex;
 use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
 
 use helpers::task_handler::Task;
-
-async fn set_device_layout(layout: &Mutex<DeviceLayout>) {
-    let dpad_device: DPadDevice = create_dpad_device();
-    let joystick_device: JoyStickDevice = create_joystick_device().await;
-    let joystick_button_device: ButtonDevice = create_joystick_button_device();
-    let rotary_device: RotaryDevice = create_rotary_device().await;
-    let l1_button_device: ButtonDevice = create_l1_button_device();
-
-    layout.lock().add_dpad(dpad_device);
-    layout.lock().add_joystick(joystick_device);
-    layout.lock().add_button(joystick_button_device);
-    layout.lock().add_rotary(rotary_device);
-    layout.lock().add_button(l1_button_device);
-}
 
 async fn get_establish_information(
     discovery: &MultiCastDiscovery,
@@ -129,7 +105,9 @@ async fn entry(spawner: Spawner) {
 
     // ArchonTransmitter::read_lock().set_endpoint(endpoint);
 
-    // set_device_layout(ArchonTransmitter::read_lock().device_layout()).await;
+    // let archon: _ = ArchonTransmitter::read_lock();
+    // let mut layout: _ = archon.device_layout().lock();
+    // DevicesBuilder::build(&mut layout).await;
 
     // defmt::info!("Archon Collecting..");
     // let archon_collect_task: Task = Task::new(send_spawner, archon_collect);

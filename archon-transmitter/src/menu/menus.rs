@@ -30,11 +30,7 @@ use embedded_menu::Menu;
 use embedded_menu::MenuState;
 use embedded_menu::MenuStyle;
 
-use archon_core::devices::button::ButtonDevice;
-use archon_core::devices::dpad::DPadDevice;
-use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::layout::DeviceLayout;
-use archon_core::devices::rotary::RotaryDevice;
 use archon_core::discovery::AnnounceInformation;
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
@@ -42,11 +38,7 @@ use archon_core::discovery::MultiCastDiscovery;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-use crate::devices::create_dpad_device;
-use crate::devices::create_joystick_button_device;
-use crate::devices::create_joystick_device;
-use crate::devices::create_l1_button_device;
-use crate::devices::create_rotary_device;
+use crate::devices::DevicesBuilder;
 
 use crate::display::setup_display;
 use crate::display::theme::MenuTheme;
@@ -55,21 +47,9 @@ use crate::display::SPIMode;
 
 pub async fn display_menu(spawner: SendSpawner) {
     let mut layout: DeviceLayout = DeviceLayout::new();
-
-    let dpad_device: DPadDevice = create_dpad_device();
-    let joystick_device: JoyStickDevice = create_joystick_device().await;
-    let joystick_button_device: ButtonDevice = create_joystick_button_device();
-    let rotary_device: RotaryDevice = create_rotary_device().await;
-    let l1_button_device: ButtonDevice = create_l1_button_device();
-
-    layout.add_dpad(dpad_device);
-    layout.add_joystick(joystick_device);
-    layout.add_button(joystick_button_device);
-    layout.add_rotary(rotary_device);
-    layout.add_button(l1_button_device);
+    DevicesBuilder::build(&mut layout).await;
 
     let mut display: GraphicsDisplay<SPIMode<'_>> = setup_display();
-
     main_display_menu(spawner, &mut display, &mut layout).await;
 }
 
