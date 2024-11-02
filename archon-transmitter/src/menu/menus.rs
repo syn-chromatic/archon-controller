@@ -1,8 +1,13 @@
+use super::enums::DiscoverySubmenu;
+use super::enums::MainMenu;
 use super::structures::InputState;
 use super::structures::InputStateEnum;
-use super::structures::MainMenu;
+use super::structures::SelectString;
+use super::structures::SubMenuSelect;
+use super::utils::discovery_submenu_items;
 use super::utils::discovery_to_menu_items;
 
+use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
 use embsys::crates::embedded_graphics;
@@ -30,6 +35,7 @@ use archon_core::devices::dpad::DPadDevice;
 use archon_core::devices::joystick::JoyStickDevice;
 use archon_core::devices::layout::DeviceLayout;
 use archon_core::devices::rotary::RotaryDevice;
+use archon_core::discovery::AnnounceInformation;
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
 use archon_core::discovery::MultiCastDiscovery;
@@ -138,8 +144,15 @@ pub async fn discovery_display_menu(
         embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
-        let discovered: Vec<DiscoveryInformation> = status.discovered();
-        let items: Vec<MenuItem<String, (), &str, true>> = discovery_to_menu_items(&discovered);
+        let mut discovered: Vec<DiscoveryInformation> = status.discovered();
+        discovered.push(DiscoveryInformation::new(
+            [192, 168, 0, 132],
+            [192, 168, 0, 79],
+            AnnounceInformation::new("Some Receiver", 8000),
+        )); // Debug Purposes
+
+        let items: Vec<MenuItem<String, Option<usize>, SubMenuSelect, true>> =
+            discovery_to_menu_items(&discovered);
 
         let mut menu = Menu::with_style("Discovery", style)
             .add_menu_items(items)
@@ -158,13 +171,79 @@ pub async fn discovery_display_menu(
                         menu.interact(Interaction::Navigation(Navigation::Previous));
                     }
                     DPad::Right => {
-                        menu.interact(Interaction::Action(Action::Select));
+                        let index: Option<Option<usize>> =
+                            menu.interact(Interaction::Action(Action::Select));
+                        if let Some(Some(index)) = index {
+                            let info: Option<&DiscoveryInformation> = discovered.get(index);
+                            if let Some(info) = info {
+                                discovery_display_submenu(display, layout, &discovery, info).await;
+                            }
+                        }
                     }
                     DPad::Down => {
                         menu.interact(Interaction::Navigation(Navigation::Next));
                     }
                     DPad::Left => {
                         discovery.stop_discovery().await;
+                        return;
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        state = menu.state();
+    }
+}
+
+pub async fn discovery_display_submenu(
+    display: &mut GraphicsDisplay<SPIMode<'_>>,
+    layout: &mut DeviceLayout,
+    discovery: &MultiCastDiscovery,
+    info: &DiscoveryInformation,
+) {
+    let mut state: MenuState<_, _, _> = Default::default();
+    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
+        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
+
+    loop {
+        embassy_futures::yield_now().await;
+        let inputs: Vec<InputType> = layout.get_inputs().await;
+        let items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> =
+            discovery_submenu_items(info);
+
+        let mut menu = Menu::with_style("Discovery", style)
+            .add_menu_items(items)
+            .build_with_state(state);
+
+        menu.update(display.get());
+        menu.draw(display.get()).unwrap();
+
+        display.get().flush();
+        display.get().clear(false);
+
+        for input in inputs {
+            match input {
+                InputType::DPad(input_dpad) => match input_dpad.dpad() {
+                    DPad::Up => {
+                        menu.interact(Interaction::Navigation(Navigation::Previous));
+                    }
+                    DPad::Right => {
+                        let value = menu.interact(Interaction::Action(Action::Select));
+                        if let Some(value) = value {
+                            match value {
+                                DiscoverySubmenu::Connect => {
+                                    let result = discovery.connect(info).await;
+                                    defmt::info!("Discovery Connection: {:?}", result);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    DPad::Down => {
+                        menu.interact(Interaction::Navigation(Navigation::Next));
+                    }
+                    DPad::Left => {
                         return;
                     }
                 },

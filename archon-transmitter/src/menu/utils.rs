@@ -1,5 +1,10 @@
+use super::enums::DiscoverySubmenu;
+use super::structures::SelectString;
+use super::structures::SubMenuSelect;
+
 use embsys::exts::std;
 
+use std::format;
 use std::string::String;
 use std::string::ToString;
 use std::vec::Vec;
@@ -7,21 +12,48 @@ use std::vec::Vec;
 use archon_core::discovery::DiscoveryInformation;
 use embedded_menu::items::MenuItem;
 
+pub fn address_to_string(addr: [u8; 4]) -> String {
+    format!("{}.{}.{}.{}", addr[0], addr[1], addr[2], addr[3])
+}
+
 pub fn discovery_to_menu_items(
     discovered: &Vec<DiscoveryInformation>,
-) -> Vec<MenuItem<String, (), &str, true>> {
+) -> Vec<MenuItem<String, Option<usize>, SubMenuSelect, true>> {
     let mut items: Vec<_> = Vec::new();
 
-    for info in discovered.iter() {
+    for (idx, info) in discovered.iter().enumerate() {
         let title_text: String = " ".to_string() + info.announce_info().name();
-        let value: &str = ">";
-        let item: MenuItem<String, (), &str, true> = MenuItem::new(title_text, value);
+        let value: SubMenuSelect = SubMenuSelect::new(idx);
+        let item: MenuItem<String, Option<usize>, SubMenuSelect, true> =
+            MenuItem::new(title_text, value).with_value_converter(|select| select.index());
         items.push(item);
     }
 
     if items.len() == 0 {
-        items.push(MenuItem::new(" No Devices..".to_string(), ""));
+        items.push(
+            MenuItem::new(" No Devices..".to_string(), SubMenuSelect::default())
+                .with_value_converter(|select| select.index()),
+        );
     }
+
+    items
+}
+
+pub fn discovery_submenu_items(
+    info: &DiscoveryInformation,
+) -> Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> {
+    let mut items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> = Vec::new();
+
+    let name: SelectString = info.announce_info().name().into();
+    let remote_addr: SelectString = address_to_string(info.remote_addr()).into();
+    let local_addr: SelectString = address_to_string(info.local_addr()).into();
+    let tcp_port: SelectString = info.announce_info().tcp_port().to_string().into();
+
+    items.push(DiscoverySubmenu::name_item(name));
+    items.push(DiscoverySubmenu::remote_ip_item(remote_addr));
+    items.push(DiscoverySubmenu::local_ip_item(local_addr));
+    items.push(DiscoverySubmenu::tcp_port_item(tcp_port));
+    items.push(DiscoverySubmenu::connect_item());
 
     items
 }

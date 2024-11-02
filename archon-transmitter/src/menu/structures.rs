@@ -1,3 +1,5 @@
+use super::enums::ButtonEnum;
+
 use embsys::drivers::hardware::HWController;
 use embsys::drivers::hardware::WIFIController;
 use embsys::exts::std;
@@ -9,70 +11,63 @@ use std::vec::Vec;
 
 use embedded_menu::items::menu_item::SelectValue;
 use embedded_menu::items::MenuItem;
-use embedded_menu::SelectValue as SelectValueMacro;
 
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-#[derive(Copy, Clone)]
-pub enum MainMenu {
-    Discovery,
-    Settings,
-    Diagnostics,
+#[derive(Clone, PartialEq)]
+pub struct SelectString {
+    string: String,
 }
 
-impl MainMenu {
-    fn as_str(&self) -> &'static str {
-        match self {
-            MainMenu::Discovery => " Discovery",
-            MainMenu::Settings => " Settings",
-            MainMenu::Diagnostics => " Diagnostics",
-        }
-    }
-
-    fn discovery_item() -> MenuItem<&'static str, Self, &'static str, true> {
-        let title_text: &str = MainMenu::Discovery.as_str();
-        let value: &str = ">";
-        MenuItem::new(title_text, value).with_value_converter(|_| MainMenu::Discovery)
-    }
-
-    fn settings_item() -> MenuItem<&'static str, Self, &'static str, true> {
-        let title_text: &str = MainMenu::Settings.as_str();
-        let value: &str = ">";
-        MenuItem::new(title_text, value).with_value_converter(|_| MainMenu::Settings)
-    }
-
-    fn diagnostics_item() -> MenuItem<&'static str, Self, &'static str, true> {
-        let title_text: &str = MainMenu::Diagnostics.as_str();
-        let value: &str = ">";
-        MenuItem::new(title_text, value).with_value_converter(|_| MainMenu::Diagnostics)
+impl SelectString {
+    pub fn new(string: String) -> Self {
+        Self { string }
     }
 }
 
-impl MainMenu {
-    pub fn to_menu_items() -> Vec<MenuItem<&'static str, Self, &'static str, true>> {
-        let mut items: Vec<_> = Vec::new();
-
-        items.push(MainMenu::discovery_item());
-        items.push(MainMenu::settings_item());
-        items.push(MainMenu::diagnostics_item());
-
-        items
+impl SelectValue for SelectString {
+    fn marker(&self) -> &str {
+        &self.string
     }
 }
 
-#[derive(Copy, Clone, PartialEq, SelectValueMacro)]
-pub enum ButtonEnum {
-    ON,
-    OFF,
+impl From<String> for SelectString {
+    fn from(value: String) -> Self {
+        SelectString::new(value)
+    }
 }
 
-impl ButtonEnum {
-    pub fn new(state: bool) -> Self {
-        match state {
-            true => ButtonEnum::ON,
-            false => ButtonEnum::OFF,
-        }
+impl From<&str> for SelectString {
+    fn from(value: &str) -> Self {
+        SelectString::new(value.to_string())
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct SubMenuSelect {
+    index: Option<usize>,
+}
+
+impl SubMenuSelect {
+    pub fn new(index: usize) -> Self {
+        Self { index: Some(index) }
+    }
+
+    pub fn index(&self) -> Option<usize> {
+        self.index
+    }
+}
+
+impl Default for SubMenuSelect {
+    fn default() -> Self {
+        Self { index: None }
+    }
+}
+
+impl SelectValue for SubMenuSelect {
+    fn marker(&self) -> &str {
+        ">"
     }
 }
 
