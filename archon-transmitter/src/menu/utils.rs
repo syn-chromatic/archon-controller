@@ -4,17 +4,12 @@ use super::structures::SubMenuSelect;
 
 use embsys::exts::std;
 
-use std::format;
 use std::string::String;
 use std::string::ToString;
 use std::vec::Vec;
 
 use archon_core::discovery::DiscoveryInformation;
 use embedded_menu::items::MenuItem;
-
-pub fn address_to_string(addr: [u8; 4]) -> String {
-    format!("{}.{}.{}.{}", addr[0], addr[1], addr[2], addr[3])
-}
 
 pub fn discovery_to_menu_items(
     discovered: &Vec<DiscoveryInformation>,
@@ -45,8 +40,8 @@ pub fn discovery_submenu_items(
     let mut items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> = Vec::new();
 
     let name: SelectString = info.announce_info().name().into();
-    let remote_addr: SelectString = address_to_string(info.remote_addr()).into();
-    let local_addr: SelectString = address_to_string(info.local_addr()).into();
+    let remote_addr: SelectString = info.remote_addr_string().into();
+    let local_addr: SelectString = info.local_addr_string().into();
     let tcp_port: SelectString = info.announce_info().tcp_port().to_string().into();
 
     items.push(DiscoverySubmenu::name_item(name));

@@ -1,5 +1,6 @@
 use crate::consts::MC_BUFFER;
 use crate::endpoint::ArchonEndpoint;
+use crate::utils::addr_bytes_to_string;
 use crate::utils::split_u16;
 
 use embsys::crates::defmt;
@@ -41,6 +42,10 @@ impl DiscoveryInformation {
         self.remote_addr
     }
 
+    pub fn remote_addr_string(&self) -> String {
+        addr_bytes_to_string(self.remote_addr)
+    }
+
     pub fn remote_addr_type(&self) -> IpAddress {
         let (a0, a1, a2, a3) = self.remote_addr.into();
         IpAddress::v4(a0, a1, a2, a3)
@@ -48,6 +53,10 @@ impl DiscoveryInformation {
 
     pub fn local_addr(&self) -> [u8; 4] {
         self.local_addr
+    }
+
+    pub fn local_addr_string(&self) -> String {
+        addr_bytes_to_string(self.local_addr)
     }
 
     pub fn local_addr_type(&self) -> IpAddress {
@@ -170,6 +179,10 @@ impl EstablishInformation {
 
     pub fn addr(&self) -> [u8; 4] {
         self.addr
+    }
+
+    pub fn addr_string(&self) -> String {
+        addr_bytes_to_string(self.addr)
     }
 
     pub fn port(&self) -> u16 {

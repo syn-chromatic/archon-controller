@@ -1,3 +1,7 @@
+use embsys::exts::std;
+use std::format;
+use std::string::String;
+
 use num::cast::AsPrimitive;
 use num::traits::float::FloatCore;
 use num::NumCast;
@@ -24,6 +28,10 @@ pub fn u8_to_bool(value: u8) -> bool {
         return false;
     }
     panic!("u8 value is not a boolean: {}", value);
+}
+
+pub fn addr_bytes_to_string(addr: [u8; 4]) -> String {
+    format!("{}.{}.{}.{}", addr[0], addr[1], addr[2], addr[3])
 }
 
 pub struct LinearInterpolationU12 {
