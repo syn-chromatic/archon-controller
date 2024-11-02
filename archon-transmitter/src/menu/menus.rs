@@ -19,16 +19,12 @@ use std::vec::Vec;
 use embassy_executor::SendSpawner;
 
 use embedded_graphics::Drawable;
-use embedded_menu::interaction::programmed::Programmed;
 use embedded_menu::interaction::Action;
 use embedded_menu::interaction::Interaction;
 use embedded_menu::interaction::Navigation;
 use embedded_menu::items::MenuItem;
-use embedded_menu::selection_indicator::style::AnimatedTriangle;
-use embedded_menu::selection_indicator::StaticPosition;
 use embedded_menu::Menu;
 use embedded_menu::MenuState;
-use embedded_menu::MenuStyle;
 
 use archon_core::devices::layout::DeviceLayout;
 use archon_core::discovery::AnnounceInformation;
@@ -41,7 +37,8 @@ use archon_core::input::InputType;
 use crate::devices::DevicesBuilder;
 
 use crate::display::setup_display;
-use crate::display::theme::MenuTheme;
+use crate::display::theme::HiddenSelectorTheme;
+use crate::display::theme::StandardTheme;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
 
@@ -59,13 +56,11 @@ pub async fn main_display_menu(
     layout: &mut DeviceLayout,
 ) {
     let mut state: MenuState<_, _, _> = Default::default();
-    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
-        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
 
     loop {
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
-        let mut menu = Menu::with_style("Main Menu", style)
+        let mut menu: _ = Menu::with_style("Main Menu", StandardTheme::style())
             .add_menu_items(MainMenu::to_menu_items())
             .build_with_state(state);
 
@@ -117,8 +112,6 @@ pub async fn discovery_display_menu(
     let status: &DiscoveryStatus = discovery.start_discovery(&spawner).await.unwrap();
 
     let mut state: MenuState<_, _, _> = Default::default();
-    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
-        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
 
     loop {
         embassy_futures::yield_now().await;
@@ -134,7 +127,7 @@ pub async fn discovery_display_menu(
         let items: Vec<MenuItem<String, Option<usize>, SubMenuSelect, true>> =
             discovery_to_menu_items(&discovered);
 
-        let mut menu = Menu::with_style("Discovery", style)
+        let mut menu: _ = Menu::with_style("Discovery", StandardTheme::style())
             .add_menu_items(items)
             .build_with_state(state);
 
@@ -183,8 +176,6 @@ pub async fn discovery_display_submenu(
     info: &DiscoveryInformation,
 ) {
     let mut state: MenuState<_, _, _> = Default::default();
-    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
-        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
 
     loop {
         embassy_futures::yield_now().await;
@@ -192,7 +183,7 @@ pub async fn discovery_display_submenu(
         let items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> =
             discovery_submenu_items(info);
 
-        let mut menu = Menu::with_style("Discovery", style)
+        let mut menu: _ = Menu::with_style("Discovery", StandardTheme::style())
             .add_menu_items(items)
             .build_with_state(state);
 
@@ -240,15 +231,13 @@ pub async fn diagnostics_display_menu(
     layout: &mut DeviceLayout,
 ) {
     let mut state: MenuState<_, _, _> = Default::default();
-    let style: MenuStyle<AnimatedTriangle, Programmed, StaticPosition, _, MenuTheme> =
-        MenuStyle::new(MenuTheme).with_selection_indicator(AnimatedTriangle::new(40));
 
     loop {
         let inputs: Vec<InputType> = layout.get_inputs().await;
         let input_state: InputState = InputState::from_inputs(&inputs).await;
         let items: Vec<MenuItem<&str, (), InputStateEnum, true>> = input_state.to_menu_items();
 
-        let mut menu = Menu::with_style("Diagnostics", style)
+        let mut menu: _ = Menu::with_style("Diagnostics", HiddenSelectorTheme::style())
             .add_menu_items(items)
             .build_with_state(state);
 
