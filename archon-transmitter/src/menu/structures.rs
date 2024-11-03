@@ -3,6 +3,7 @@
 use super::enums::ButtonEnum;
 
 use embsys::crates::embassy_rp;
+use embsys::crates::embassy_time;
 use embsys::drivers::hardware::HWController;
 use embsys::drivers::hardware::WIFIController;
 use embsys::exts::std;
@@ -10,9 +11,12 @@ use embsys::exts::std;
 use std::format;
 use std::string::String;
 use std::string::ToString;
+use std::time::Duration;
 use std::vec::Vec;
 
 use embassy_rp::adc::Error as AdcError;
+use embassy_time::with_timeout;
+use embassy_time::TimeoutError;
 
 use embedded_menu::items::menu_item::SelectValue;
 use embedded_menu::items::MenuItem;
@@ -173,20 +177,30 @@ pub struct InputState {
 }
 
 impl InputState {
-    async fn get_sys_voltage() -> Result<InputStateEnum, AdcError> {
+    async fn get_sys_voltage() -> InputStateEnum {
         // Causes hang when WI-FI task completes?
         // Needed to disable LED to get accurate sys voltage
-        // As CYW43 is connected to GP29
-        // WIFIController::control_mut().gpio_set(0, false).await;
+        // As LED is connected to CYW43 and the chip uses GP29
 
-        let sys_voltage: f32 = HWController::sys_voltage().await?;
-        Ok(InputStateEnum::f32(sys_voltage))
+        let result: Result<(), TimeoutError> = with_timeout(
+            Duration::from_millis(50),
+            WIFIController::control_mut().gpio_set(0, false),
+        )
+        .await;
+
+        if let Ok(_) = result {
+            if let Ok(sys_voltage) = HWController::sys_voltage().await {
+                return InputStateEnum::f32(sys_voltage);
+            }
+        }
+
+        InputStateEnum::f32(0.0)
     }
 }
 
 impl InputState {
     pub async fn from_inputs(inputs: &Vec<InputType>) -> Result<Self, AdcError> {
-        let sys_voltage: InputStateEnum = Self::get_sys_voltage().await?;
+        let sys_voltage: InputStateEnum = Self::get_sys_voltage().await;
         let mut dpad_up: InputStateEnum = InputStateEnum::button(false);
         let mut dpad_right: InputStateEnum = InputStateEnum::button(false);
         let mut dpad_down: InputStateEnum = InputStateEnum::button(false);
