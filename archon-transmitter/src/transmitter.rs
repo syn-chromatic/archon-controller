@@ -113,6 +113,10 @@ impl ArchonTransmitter {
         *self.endpoint.lock() = Some(endpoint);
     }
 
+    pub fn unset_endpoint(&self) {
+        *self.endpoint.lock() = None;
+    }
+
     pub async fn send(&self) -> Result<(), ()> {
         let mut rx_meta: [PacketMetadata; UDP_BUFFER] = [PacketMetadata::EMPTY; UDP_BUFFER];
         let mut rx_buffer: [u8; UDP_BUFFER] = [0; UDP_BUFFER];

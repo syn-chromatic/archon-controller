@@ -149,6 +149,11 @@ where
     pub fn get(&mut self) -> &mut GraphicsMode<T> {
         &mut self.display
     }
+
+    pub fn refresh(&mut self) {
+        self.display.flush();
+        self.display.clear(false);
+    }
 }
 
 pub fn setup_display<'a>() -> GraphicsDisplay<SPIMode<'a>> {

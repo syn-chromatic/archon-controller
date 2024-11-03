@@ -58,6 +58,7 @@ pub async fn main_display_menu(
     let mut state: MenuState<_, _, _> = Default::default();
 
     loop {
+        embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
         let mut menu: _ = Menu::with_style("Main Menu", StandardTheme::style())
@@ -67,8 +68,7 @@ pub async fn main_display_menu(
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
 
-        display.get().flush();
-        display.get().clear(false);
+        display.refresh();
 
         for input in inputs {
             match input {
@@ -134,8 +134,7 @@ pub async fn discovery_display_menu(
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
 
-        display.get().flush();
-        display.get().clear(false);
+        display.refresh();
 
         for input in inputs {
             match input {
@@ -190,8 +189,7 @@ pub async fn discovery_display_submenu(
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
 
-        display.get().flush();
-        display.get().clear(false);
+        display.refresh();
 
         for input in inputs {
             match input {
@@ -233,6 +231,7 @@ pub async fn diagnostics_display_menu(
     let mut state: MenuState<_, _, _> = Default::default();
 
     loop {
+        embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = layout.get_inputs().await;
         let input_state: InputState = InputState::from_inputs(&inputs).await;
         let items: Vec<MenuItem<&str, (), InputStateEnum, true>> = input_state.to_menu_items();
@@ -244,8 +243,7 @@ pub async fn diagnostics_display_menu(
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
 
-        display.get().flush();
-        display.get().clear(false);
+        display.refresh();
 
         for input in inputs {
             match input {
