@@ -1,8 +1,9 @@
-mod menus;
-mod structures;
-mod utils;
-mod theme;
 mod indicator;
+mod interface;
+mod style;
+mod structures;
+mod theme;
+mod utils;
 
 pub mod enums;
-pub use menus::display_menu;
+pub use interface::menu_interface;

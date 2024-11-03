@@ -1,10 +1,12 @@
 use super::enums::DiscoverySubmenu;
 use super::enums::MainMenu;
+use super::indicator::DynShape;
 use super::structures::InputState;
 use super::structures::InputStateEnum;
 use super::structures::SelectString;
 use super::structures::SubMenuSelect;
-use super::theme::DynamicTheme;
+use super::style::DynMenuStyle;
+use super::theme::StandardTheme;
 use super::utils::discovery_submenu_items;
 use super::utils::discovery_to_menu_items;
 
@@ -41,26 +43,27 @@ use archon_core::discovery::MultiCastDiscovery;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-pub async fn display_menu(spawner: SendSpawner) {
+pub async fn menu_interface(spawner: SendSpawner) {
     let mut layout: DeviceLayout = DeviceLayout::new();
     DevicesBuilder::build(&mut layout).await;
 
     let mut display: GraphicsDisplay<SPIMode<'_>> = setup_display();
-    main_display_menu(spawner, &mut display, &mut layout).await;
+    main_menu(spawner, &mut display, &mut layout).await;
 }
 
-pub async fn main_display_menu(
+pub async fn main_menu(
     spawner: SendSpawner,
     display: &mut GraphicsDisplay<SPIMode<'_>>,
     layout: &mut DeviceLayout,
 ) {
-    let mut state: MenuState<_, _, _> = Default::default();
+    let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
+    let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
-        let mut menu: _ = Menu::with_style("Main Menu", DynamicTheme::style())
+        let mut menu: _ = Menu::with_style("Main Menu", *style)
             .add_menu_items(MainMenu::to_menu_items())
             .build_with_state(state);
 
@@ -110,7 +113,8 @@ pub async fn discovery_display_menu(
     let _ = discovery.join().await;
     let status: &DiscoveryStatus = discovery.start_discovery(&spawner).await.unwrap();
 
-    let mut state: MenuState<_, _, _> = Default::default();
+    let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
+    let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
@@ -126,7 +130,7 @@ pub async fn discovery_display_menu(
         let items: Vec<MenuItem<String, Option<usize>, SubMenuSelect, true>> =
             discovery_to_menu_items(&discovered);
 
-        let mut menu: _ = Menu::with_style("Discovery", DynamicTheme::style())
+        let mut menu: _ = Menu::with_style("Discovery", *style)
             .add_menu_items(items)
             .build_with_state(state);
 
@@ -173,8 +177,8 @@ pub async fn discovery_display_submenu(
     discovery: &MultiCastDiscovery,
     info: &DiscoveryInformation,
 ) {
-    let mut state: _ = Default::default();
-    let mut theme: _ = DynamicTheme::style();
+    let mut style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
+    let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
@@ -182,11 +186,14 @@ pub async fn discovery_display_submenu(
         let items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> =
             discovery_submenu_items(info);
 
-        let mut menu: _ = Menu::with_style("Discovery", theme)
+        let mut menu: _ = Menu::with_style("Discovery", *style)
             .add_menu_items(items)
             .build_with_state(state);
 
-        theme = DynamicTheme::from_actionable(menu.selected_value().is_actionable());
+        match menu.selected_value().is_actionable() {
+            true => style.set_indicator(DynShape::FilledBorder),
+            false => style.set_indicator(DynShape::Triangle),
+        }
 
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
@@ -230,7 +237,8 @@ pub async fn diagnostics_display_menu(
     display: &mut GraphicsDisplay<SPIMode<'_>>,
     layout: &mut DeviceLayout,
 ) {
-    let mut state: MenuState<_, _, _> = Default::default();
+    let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Hidden);
+    let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
@@ -242,7 +250,7 @@ pub async fn diagnostics_display_menu(
         };
         let items: Vec<MenuItem<&str, (), InputStateEnum, true>> = input_state.to_menu_items();
 
-        let mut menu: _ = Menu::with_style("Diagnostics", DynamicTheme::hidden())
+        let mut menu: _ = Menu::with_style("Diagnostics", *style)
             .add_menu_items(items)
             .build_with_state(state);
 

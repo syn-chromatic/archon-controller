@@ -2,108 +2,54 @@
 
 use embsys::crates::embedded_graphics;
 
-use embedded_graphics::prelude::DrawTarget;
-use embedded_graphics::prelude::PixelColor;
-use embedded_graphics::prelude::Point;
 use embedded_graphics::prelude::Size;
-use embedded_graphics::primitives::triangle::Triangle as TriangleShape;
 use embedded_graphics::primitives::ContainsPoint;
 use embedded_graphics::primitives::Primitive;
 use embedded_graphics::primitives::PrimitiveStyle;
 use embedded_graphics::primitives::Rectangle as RectangleShape;
 use embedded_graphics::transform::Transform;
 use embedded_graphics::Drawable;
-use embedded_layout::align::Align;
-use embedded_layout::prelude::horizontal::LeftToRight;
-use embedded_layout::prelude::vertical::Center;
 
 use embedded_menu::interaction::InputState;
 use embedded_menu::margin::Insets;
 use embedded_menu::selection_indicator::style::interpolate;
+use embedded_menu::selection_indicator::style::triangle::Arrow;
 use embedded_menu::selection_indicator::style::IndicatorStyle;
 use embedded_menu::theme::Theme;
 
-#[derive(Clone, Copy)]
-pub struct Arrow {
-    body: RectangleShape,
-    tip: TriangleShape,
-}
-
-impl Arrow {
-    const SHRINK: i32 = 1;
-
-    pub fn new(bounds: RectangleShape, fill_width: u32) -> Self {
-        let body = RectangleShape::new(bounds.top_left, Size::new(fill_width, bounds.size.height));
-
-        let tip = TriangleShape::new(
-            Point::new(0, Self::SHRINK),
-            Point::new(0, Self::tip_width(bounds)),
-            Point::new(
-                bounds.size.height as i32 / 2 - Self::SHRINK,
-                bounds.size.height as i32 / 2,
-            ),
-        )
-        .align_to(&body, LeftToRight, Center)
-        // e-layout doesn't align well to 0 area rectangles
-        .translate(Point::new(if body.is_zero_sized() { -1 } else { 0 }, 0));
-
-        Self { body, tip }
-    }
-
-    pub fn tip_width(bounds: RectangleShape) -> i32 {
-        bounds.size.height as i32 - 1 - Self::SHRINK
-    }
-
-    pub fn draw<D, C>(&self, color: C, target: &mut D) -> Result<(), D::Error>
-    where
-        C: PixelColor,
-        D: DrawTarget<Color = C>,
-    {
-        let style = PrimitiveStyle::with_fill(color);
-
-        self.body.into_styled(style).draw(target)?;
-        self.tip.into_styled(style).draw(target)?;
-
-        Ok(())
-    }
-}
-
 #[derive(Copy, Clone)]
-pub enum DynamicShape {
-    Hidden,
-    Triangle(Arrow),
-    Border(RectangleShape),
-}
-
-#[derive(Copy, Clone)]
-pub enum DynamicShapePrimitive {
+pub enum DynShape {
     Hidden,
     Triangle,
     Border,
     FilledBorder,
+    Line,
 }
 
-impl Transform for DynamicShape {
+#[derive(Copy, Clone)]
+pub enum DynIndicatorShape {
+    Hidden,
+    Arrow(Arrow),
+    Rectangle(RectangleShape),
+}
+
+impl Transform for DynIndicatorShape {
     fn translate(&self, by: embedded_graphics::prelude::Point) -> Self {
         match self {
-            DynamicShape::Hidden => *self,
-            DynamicShape::Triangle(arrow) => Self::Triangle(Arrow {
-                body: arrow.body.translate(by),
-                tip: arrow.tip.translate(by),
-            }),
-            DynamicShape::Border(rectangle) => Self::Border(rectangle.translate(by)),
+            DynIndicatorShape::Hidden => *self,
+            DynIndicatorShape::Arrow(arrow) => Self::Arrow(arrow.translate(by)),
+            DynIndicatorShape::Rectangle(rectangle) => Self::Rectangle(rectangle.translate(by)),
         }
     }
 
     fn translate_mut(&mut self, by: embedded_graphics::prelude::Point) -> &mut Self {
         match self {
-            DynamicShape::Hidden => self,
-            DynamicShape::Triangle(arrow) => {
-                arrow.body.translate_mut(by);
-                arrow.tip.translate_mut(by);
+            DynIndicatorShape::Hidden => self,
+            DynIndicatorShape::Arrow(arrow) => {
+                arrow.translate_mut(by);
                 self
             }
-            DynamicShape::Border(rectangle) => {
+            DynIndicatorShape::Rectangle(rectangle) => {
                 rectangle.translate_mut(by);
                 self
             }
@@ -111,52 +57,33 @@ impl Transform for DynamicShape {
     }
 }
 
-impl ContainsPoint for DynamicShape {
+impl ContainsPoint for DynIndicatorShape {
     fn contains(&self, point: embedded_graphics::prelude::Point) -> bool {
         match self {
-            DynamicShape::Hidden => false,
-            DynamicShape::Triangle(arrow) => {
-                arrow.body.contains(point) || arrow.tip.contains(point)
-            }
-            DynamicShape::Border(rectangle) => rectangle.contains(point),
+            DynIndicatorShape::Hidden => false,
+            DynIndicatorShape::Arrow(arrow) => arrow.contains(point),
+            DynIndicatorShape::Rectangle(rectangle) => rectangle.contains(point),
         }
     }
 }
 
 #[derive(Copy, Clone)]
-pub struct DynamicIndicator {
-    shape: DynamicShapePrimitive,
+pub struct DynIndicator {
+    shape: DynShape,
 }
 
-impl DynamicIndicator {
-    pub fn hidden() -> Self {
-        Self {
-            shape: DynamicShapePrimitive::Hidden,
-        }
+impl DynIndicator {
+    pub fn new(shape: DynShape) -> Self {
+        Self { shape }
     }
 
-    pub fn triangle() -> Self {
-        Self {
-            shape: DynamicShapePrimitive::Triangle,
-        }
-    }
-
-    pub fn border() -> Self {
-        Self {
-            shape: DynamicShapePrimitive::Border,
-        }
-    }
-
-    pub fn filled_border() -> Self {
-        Self {
-            shape: DynamicShapePrimitive::FilledBorder,
-        }
+    pub fn change(&mut self, shape: DynShape) {
+        self.shape = shape;
     }
 }
 
-impl IndicatorStyle for DynamicIndicator {
-    type Shape = DynamicShape;
-
+impl IndicatorStyle for DynIndicator {
+    type Shape = DynIndicatorShape;
     type State = ();
 
     fn padding(&self, _state: &Self::State, _height: i32) -> Insets {
@@ -170,17 +97,19 @@ impl IndicatorStyle for DynamicIndicator {
 
     fn shape(&self, _state: &Self::State, bounds: RectangleShape, fill_width: u32) -> Self::Shape {
         match self.shape {
-            DynamicShapePrimitive::Hidden => DynamicShape::Hidden,
-            DynamicShapePrimitive::Triangle => {
-                DynamicShape::Triangle(Arrow::new(bounds, fill_width))
-            }
-            DynamicShapePrimitive::Border => DynamicShape::Border(RectangleShape::new(
+            DynShape::Hidden => DynIndicatorShape::Hidden,
+            DynShape::Triangle => DynIndicatorShape::Arrow(Arrow::new(bounds, fill_width)),
+            DynShape::Border => DynIndicatorShape::Rectangle(RectangleShape::new(
                 bounds.top_left,
                 Size::new(fill_width, bounds.size.height),
             )),
-            DynamicShapePrimitive::FilledBorder => DynamicShape::Border(RectangleShape::new(
+            DynShape::FilledBorder => DynIndicatorShape::Rectangle(RectangleShape::new(
                 bounds.top_left,
                 Size::new(bounds.size.width, bounds.size.height),
+            )),
+            DynShape::Line => DynIndicatorShape::Rectangle(RectangleShape::new(
+                bounds.top_left,
+                Size::new(fill_width.max(1), bounds.size.height),
             )),
         }
     }
@@ -204,14 +133,14 @@ impl IndicatorStyle for DynamicIndicator {
             0
         };
 
-        let shape: DynamicShape = self.shape(state, display_area, fill_width);
+        let shape: DynIndicatorShape = self.shape(state, display_area, fill_width);
 
         match shape {
-            DynamicShape::Hidden => {}
-            DynamicShape::Triangle(arrow) => {
+            DynIndicatorShape::Hidden => {}
+            DynIndicatorShape::Arrow(arrow) => {
                 arrow.draw(theme.selection_color(), display)?;
             }
-            DynamicShape::Border(rectangle) => {
+            DynIndicatorShape::Rectangle(rectangle) => {
                 display_area
                     .into_styled(PrimitiveStyle::with_stroke(theme.selection_color(), 1))
                     .draw(display)?;

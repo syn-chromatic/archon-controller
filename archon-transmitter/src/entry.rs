@@ -8,7 +8,7 @@ use crate::transmitter::ArchonTransmitter;
 
 use crate::devices::DevicesBuilder;
 
-use crate::menu::display_menu;
+use crate::menu::menu_interface;
 
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
@@ -93,7 +93,7 @@ async fn entry(spawner: Spawner) {
 
     WIFIController::control_mut().gpio_set(0, true).await;
 
-    display_menu(send_spawner).await;
+    menu_interface(send_spawner).await;
 
     // let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
     // let _ = discovery.join().await;
