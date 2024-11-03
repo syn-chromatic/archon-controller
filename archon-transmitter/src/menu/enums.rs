@@ -68,7 +68,7 @@ impl MainMenu {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum DiscoverySubmenu {
     Name,
     RemoteIP,
@@ -80,11 +80,11 @@ pub enum DiscoverySubmenu {
 impl DiscoverySubmenu {
     pub fn as_str(&self) -> &str {
         match self {
-            DiscoverySubmenu::Name => " Name",
-            DiscoverySubmenu::RemoteIP => " ReIP",
-            DiscoverySubmenu::LocalIP => " LoIP",
-            DiscoverySubmenu::TCPPort => " Port",
-            DiscoverySubmenu::Connect => " Connect",
+            DiscoverySubmenu::Name => "Name",
+            DiscoverySubmenu::RemoteIP => "ReIP",
+            DiscoverySubmenu::LocalIP => "LoIP",
+            DiscoverySubmenu::TCPPort => "Port",
+            DiscoverySubmenu::Connect => "Connect",
         }
     }
 
@@ -119,5 +119,12 @@ impl DiscoverySubmenu {
     pub fn connect_item() -> MenuItem<&'static str, DiscoverySubmenu, SelectString, true> {
         let title_text: &str = DiscoverySubmenu::Connect.as_str();
         MenuItem::new(title_text, "".into()).with_value_converter(|_| DiscoverySubmenu::Connect)
+    }
+
+    pub fn is_actionable(&self) -> bool {
+        match self {
+            DiscoverySubmenu::Connect => true,
+            _ => false,
+        }
     }
 }

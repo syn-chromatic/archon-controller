@@ -4,6 +4,7 @@ use super::structures::InputState;
 use super::structures::InputStateEnum;
 use super::structures::SelectString;
 use super::structures::SubMenuSelect;
+use super::theme::DynamicTheme;
 use super::utils::discovery_submenu_items;
 use super::utils::discovery_to_menu_items;
 
@@ -37,8 +38,6 @@ use archon_core::input::InputType;
 use crate::devices::DevicesBuilder;
 
 use crate::display::setup_display;
-use crate::display::theme::HiddenSelectorTheme;
-use crate::display::theme::StandardTheme;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
 
@@ -61,7 +60,7 @@ pub async fn main_display_menu(
         embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
-        let mut menu: _ = Menu::with_style("Main Menu", StandardTheme::style())
+        let mut menu: _ = Menu::with_style("Main Menu", DynamicTheme::style())
             .add_menu_items(MainMenu::to_menu_items())
             .build_with_state(state);
 
@@ -127,7 +126,7 @@ pub async fn discovery_display_menu(
         let items: Vec<MenuItem<String, Option<usize>, SubMenuSelect, true>> =
             discovery_to_menu_items(&discovered);
 
-        let mut menu: _ = Menu::with_style("Discovery", StandardTheme::style())
+        let mut menu: _ = Menu::with_style("Discovery", DynamicTheme::style())
             .add_menu_items(items)
             .build_with_state(state);
 
@@ -174,7 +173,8 @@ pub async fn discovery_display_submenu(
     discovery: &MultiCastDiscovery,
     info: &DiscoveryInformation,
 ) {
-    let mut state: MenuState<_, _, _> = Default::default();
+    let mut state: _ = Default::default();
+    let mut theme: _ = DynamicTheme::style();
 
     loop {
         embassy_futures::yield_now().await;
@@ -182,9 +182,11 @@ pub async fn discovery_display_submenu(
         let items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> =
             discovery_submenu_items(info);
 
-        let mut menu: _ = Menu::with_style("Discovery", StandardTheme::style())
+        let mut menu: _ = Menu::with_style("Discovery", theme)
             .add_menu_items(items)
             .build_with_state(state);
+
+        theme = DynamicTheme::from_actionable(menu.selected_value().is_actionable());
 
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
@@ -236,7 +238,7 @@ pub async fn diagnostics_display_menu(
         let input_state: InputState = InputState::from_inputs(&inputs).await;
         let items: Vec<MenuItem<&str, (), InputStateEnum, true>> = input_state.to_menu_items();
 
-        let mut menu: _ = Menu::with_style("Diagnostics", HiddenSelectorTheme::style())
+        let mut menu: _ = Menu::with_style("Diagnostics", DynamicTheme::hidden())
             .add_menu_items(items)
             .build_with_state(state);
 
