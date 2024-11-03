@@ -17,7 +17,6 @@ use crate::display::SPIMode;
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
-use embsys::crates::embassy_rp;
 use embsys::crates::embedded_graphics;
 use embsys::exts::std;
 
