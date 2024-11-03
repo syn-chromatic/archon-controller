@@ -1,5 +1,8 @@
+#![allow(unused_imports)]
+
 use super::enums::ButtonEnum;
 
+use embsys::crates::embassy_rp;
 use embsys::drivers::hardware::HWController;
 use embsys::drivers::hardware::WIFIController;
 use embsys::exts::std;
@@ -8,6 +11,8 @@ use std::format;
 use std::string::String;
 use std::string::ToString;
 use std::vec::Vec;
+
+use embassy_rp::adc::Error as AdcError;
 
 use embedded_menu::items::menu_item::SelectValue;
 use embedded_menu::items::MenuItem;
@@ -168,16 +173,20 @@ pub struct InputState {
 }
 
 impl InputState {
-    async fn get_sys_voltage() -> InputStateEnum {
-        WIFIController::control_mut().gpio_set(0, false).await;
-        let sys_voltage: f32 = HWController::sys_voltage_blocking().unwrap();
-        InputStateEnum::f32(sys_voltage)
+    async fn get_sys_voltage() -> Result<InputStateEnum, AdcError> {
+        // Causes hang when WI-FI task completes?
+        // Needed to disable LED to get accurate sys voltage
+        // As CYW43 is connected to GP29
+        // WIFIController::control_mut().gpio_set(0, false).await;
+
+        let sys_voltage: f32 = HWController::sys_voltage().await?;
+        Ok(InputStateEnum::f32(sys_voltage))
     }
 }
 
 impl InputState {
-    pub async fn from_inputs(inputs: &Vec<InputType>) -> Self {
-        let sys_voltage: InputStateEnum = Self::get_sys_voltage().await;
+    pub async fn from_inputs(inputs: &Vec<InputType>) -> Result<Self, AdcError> {
+        let sys_voltage: InputStateEnum = Self::get_sys_voltage().await?;
         let mut dpad_up: InputStateEnum = InputStateEnum::button(false);
         let mut dpad_right: InputStateEnum = InputStateEnum::button(false);
         let mut dpad_down: InputStateEnum = InputStateEnum::button(false);
@@ -206,7 +215,7 @@ impl InputState {
             }
         }
 
-        InputState {
+        Ok(InputState {
             sys_voltage,
             dpad_up,
             dpad_right,
@@ -215,7 +224,7 @@ impl InputState {
             joystick_x,
             joystick_y,
             rotary,
-        }
+        })
     }
 
     pub fn to_menu_items(&self) -> Vec<MenuItem<&str, (), InputStateEnum, true>> {

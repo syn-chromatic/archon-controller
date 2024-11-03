@@ -17,6 +17,7 @@ use crate::display::SPIMode;
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
+use embsys::crates::embassy_rp;
 use embsys::crates::embedded_graphics;
 use embsys::exts::std;
 
@@ -234,8 +235,12 @@ pub async fn diagnostics_display_menu(
 
     loop {
         embassy_futures::yield_now().await;
+
         let inputs: Vec<InputType> = layout.get_inputs().await;
-        let input_state: InputState = InputState::from_inputs(&inputs).await;
+        let input_state: InputState = match InputState::from_inputs(&inputs).await {
+            Ok(state) => state,
+            Err(_) => continue,
+        };
         let items: Vec<MenuItem<&str, (), InputStateEnum, true>> = input_state.to_menu_items();
 
         let mut menu: _ = Menu::with_style("Diagnostics", DynamicTheme::hidden())
