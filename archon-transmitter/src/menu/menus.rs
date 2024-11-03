@@ -8,6 +8,12 @@ use super::theme::DynamicTheme;
 use super::utils::discovery_submenu_items;
 use super::utils::discovery_to_menu_items;
 
+use crate::devices::DevicesBuilder;
+
+use crate::display::setup_display;
+use crate::display::GraphicsDisplay;
+use crate::display::SPIMode;
+
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
@@ -34,12 +40,6 @@ use archon_core::discovery::DiscoveryStatus;
 use archon_core::discovery::MultiCastDiscovery;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
-
-use crate::devices::DevicesBuilder;
-
-use crate::display::setup_display;
-use crate::display::GraphicsDisplay;
-use crate::display::SPIMode;
 
 pub async fn display_menu(spawner: SendSpawner) {
     let mut layout: DeviceLayout = DeviceLayout::new();

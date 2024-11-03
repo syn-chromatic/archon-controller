@@ -27,9 +27,8 @@ features = ["graphics", "buffered"]
 
 
 [dependencies.embedded-menu]
-# version = "0.6"
-git = "https://github.com/syn-chromatic/embedded-menu.git"
-rev = "993e18e3579099af7d196f0854be43ee026e063b"
+git = "https://github.com/bugadani/embedded-menu"
+rev = "7978c8fdbac1d130c14d0be1730200f0e684bd22"
 
 
 [dependencies.embedded-layout]
