@@ -2,6 +2,7 @@ use crate::consts::WIFI_PASS;
 use crate::consts::WIFI_SSID;
 use crate::transmitter::ArchonTransmitter;
 
+use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_net;
 use embsys::crates::heapless;
@@ -34,13 +35,19 @@ pub async fn archon_collect(_s: TaskState) {
 
 #[embassy_executor::task]
 pub async fn wifi_connect(_s: TaskState) {
-    let wifi_controller: &mut WIFIController = WIFIController::as_mut();
-
     let psk: [u8; 32] = WpaPsk::new().derive_psk(WIFI_SSID, WIFI_PASS);
-    let timeout: Duration = Duration::from_secs(60);
-    let _ = wifi_controller
-        .join_wpa2_psk(WIFI_SSID, &psk, timeout)
-        .await;
+    let timeout: Duration = Duration::from_secs(30);
+    loop {
+        if let Ok(_) = WIFIController::as_mut()
+            .join_wpa2_psk(WIFI_SSID, &psk, timeout)
+            .await
+        {
+            break;
+        }
+        defmt::info!("Reconnecting to WiFi...");
+    }
+    let state = WIFIController::state_ref();
+    defmt::info!("WIFIState: {:?}", state);
 }
 
 #[embassy_executor::task]

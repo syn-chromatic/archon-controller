@@ -10,7 +10,7 @@ path = "./archon-core"
 
 [workspace.dependencies.embsys]
 git = "https://github.com/syn-chromatic/embsys-rs.git"
-rev = "79cdafa1bbb5f658e03cd8e8248ef107ce06aac3"
+rev = "8f58e68ca59b1df72467dea868d8c7c69c2aaace"
 package = "embsys"
 features = ["rp2040-probe"]
 
