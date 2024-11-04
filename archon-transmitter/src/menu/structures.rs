@@ -178,23 +178,16 @@ pub struct InputState {
 
 impl InputState {
     async fn get_sys_voltage() -> InputStateEnum {
-        // Causes hang when WI-FI task completes?
         // Needed to disable LED to get accurate sys voltage
         // As LED is connected to CYW43 and the chip uses GP29
 
-        let result: Result<(), TimeoutError> = with_timeout(
-            Duration::from_millis(50),
-            WIFIController::control_mut().gpio_set(0, false),
-        )
-        .await;
+        let mut sys_voltage: f32 = 0.0;
 
-        if let Ok(_) = result {
-            if let Ok(sys_voltage) = HWController::sys_voltage().await {
-                return InputStateEnum::f32(sys_voltage);
-            }
+        if let Ok(voltage) = HWController::sys_voltage().await {
+            sys_voltage = voltage;
         }
 
-        InputStateEnum::f32(0.0)
+        InputStateEnum::f32(sys_voltage)
     }
 }
 

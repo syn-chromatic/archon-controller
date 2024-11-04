@@ -67,8 +67,6 @@ async fn entry(spawner: Spawner) {
     defmt::info!("Initializing WiFi Driver..");
     SysInit::wifi_controller(&spawner).await;
 
-    WIFIController::control_mut().gpio_set(0, true).await;
-
     // tests::joystick_test().await;
     // tests::rotary_test().await;
     // tests::dpad_test();
@@ -79,8 +77,6 @@ async fn entry(spawner: Spawner) {
     let send_spawner: SendSpawner = spawner.make_send();
     let wifi_task: Task = Task::new(send_spawner, wifi_connect);
 
-    WIFIController::control_mut().gpio_set(0, false).await;
-
     defmt::info!("Initializing Startup Tasks..");
     let _ = wifi_task.start();
     // wifi_task.wait().await;
@@ -90,8 +86,6 @@ async fn entry(spawner: Spawner) {
         let address = config_v4.address;
         defmt::info!("ADDRESS: {:?}", address);
     }
-
-    WIFIController::control_mut().gpio_set(0, true).await;
 
     menu_interface(send_spawner).await;
 
