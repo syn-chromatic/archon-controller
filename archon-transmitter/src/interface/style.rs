@@ -1,6 +1,10 @@
 use super::indicator::DynIndicator;
 use super::indicator::DynShape;
 
+use embsys::crates::embedded_graphics;
+
+use embedded_graphics::mono_font::iso_8859_1::FONT_6X12;
+
 use embedded_menu::interaction::programmed::Programmed;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::theme::Theme;
@@ -27,6 +31,8 @@ where
         indicator: DynIndicator,
     ) -> MenuStyle<DynIndicator, Programmed, AnimatedPosition, R, T> {
         MenuStyle::new(theme)
+            .with_title_font(&FONT_6X12)
+            .with_font(&FONT_6X12)
             .with_selection_indicator(indicator)
             .with_animated_selection_indicator(3)
     }

@@ -88,10 +88,10 @@ impl IndicatorStyle for DynIndicator {
 
     fn padding(&self, _state: &Self::State, _height: i32) -> Insets {
         Insets {
-            left: 10,
-            top: 1,
-            right: 2,
-            bottom: 1,
+            left: 12,
+            top: 0,
+            right: 0,
+            bottom: 0,
         }
     }
 
@@ -101,11 +101,11 @@ impl IndicatorStyle for DynIndicator {
             DynShape::Triangle => DynIndicatorShape::Arrow(Arrow::new(bounds, fill_width)),
             DynShape::Border => DynIndicatorShape::Rectangle(RectangleShape::new(
                 bounds.top_left,
-                Size::new(fill_width, bounds.size.height),
+                Size::new(fill_width, bounds.size.height + 2),
             )),
             DynShape::FilledBorder => DynIndicatorShape::Rectangle(RectangleShape::new(
                 bounds.top_left,
-                Size::new(bounds.size.width, bounds.size.height),
+                Size::new(bounds.size.width, bounds.size.height + 2),
             )),
             DynShape::Line => DynIndicatorShape::Rectangle(RectangleShape::new(
                 bounds.top_left,
