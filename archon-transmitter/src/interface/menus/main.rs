@@ -5,7 +5,7 @@ use super::super::indicator::DynShape;
 use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
 use super::about::about_menu;
-use super::diagnostics::diagnostics_display_menu;
+use super::diagnostics::diagnostics_menu;
 use super::discovery::discovery_menu;
 
 use crate::devices::DevicesBuilder;
@@ -79,7 +79,7 @@ pub async fn main_menu(
                                 }
                                 MainMenu::Settings => {}
                                 MainMenu::Diagnostics => {
-                                    diagnostics_display_menu(display, layout).await;
+                                    diagnostics_menu(display, layout).await;
                                 }
                                 MainMenu::About => {
                                     about_menu(display, layout).await;

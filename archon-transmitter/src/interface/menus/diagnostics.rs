@@ -25,7 +25,7 @@ use archon_core::devices::layout::DeviceLayout;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-pub async fn diagnostics_display_menu(
+pub async fn diagnostics_menu(
     display: &mut GraphicsDisplay<SPIMode<'_>>,
     layout: &mut DeviceLayout,
 ) {
