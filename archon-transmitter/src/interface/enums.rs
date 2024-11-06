@@ -78,6 +78,10 @@ impl ValueEnum {
     pub fn empty() -> ValueEnum {
         ValueEnum::Str("")
     }
+
+    pub fn arrow() -> ValueEnum {
+        ValueEnum::Str(">")
+    }
 }
 
 impl SelectValue for ValueEnum {
@@ -125,10 +129,10 @@ impl MainMenu {
     pub fn to_menu_items<'a>() -> Vec<MenuItem<&'a str, Self, ValueEnum, true>> {
         let mut items: _ = Vec::new();
 
-        items.push(MainMenu::Discovery.item(ValueEnum::str(">")));
-        items.push(MainMenu::Settings.item(ValueEnum::str(">")));
-        items.push(MainMenu::Diagnostics.item(ValueEnum::str(">")));
-        items.push(MainMenu::About.item(ValueEnum::str(">")));
+        items.push(MainMenu::Discovery.item(ValueEnum::arrow()));
+        items.push(MainMenu::Settings.item(ValueEnum::arrow()));
+        items.push(MainMenu::Diagnostics.item(ValueEnum::arrow()));
+        items.push(MainMenu::About.item(ValueEnum::arrow()));
 
         items
     }
@@ -199,7 +203,7 @@ impl SettingsMenu {
     pub fn to_menu_items<'a>() -> Vec<MenuItem<&'a str, Self, ValueEnum, true>> {
         let mut items: _ = Vec::new();
 
-        items.push(SettingsMenu::WIFI.item(ValueEnum::str(">")));
+        items.push(SettingsMenu::WIFI.item(ValueEnum::arrow()));
 
         items
     }
