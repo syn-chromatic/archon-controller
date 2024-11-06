@@ -2,8 +2,6 @@
 
 use super::super::enums::DiscoverySubmenu;
 use super::super::indicator::DynShape;
-use super::super::structures::SelectString;
-use super::super::structures::SubMenuSelect;
 use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
 use super::super::utils::discovery_to_menu_items;
@@ -17,7 +15,6 @@ use embsys::crates::embassy_futures;
 use embsys::crates::embedded_graphics;
 use embsys::exts::std;
 
-use std::string::String;
 use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
@@ -26,7 +23,6 @@ use embedded_graphics::Drawable;
 use embedded_menu::interaction::Action;
 use embedded_menu::interaction::Interaction;
 use embedded_menu::interaction::Navigation;
-use embedded_menu::items::MenuItem;
 use embedded_menu::Menu;
 use embedded_menu::MenuState;
 
@@ -38,7 +34,7 @@ use archon_core::discovery::MultiCastDiscovery;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-pub async fn discovery_display_menu(
+pub async fn discovery_menu(
     spawner: SendSpawner,
     display: &mut GraphicsDisplay<SPIMode<'_>>,
     layout: &mut DeviceLayout,
@@ -61,8 +57,7 @@ pub async fn discovery_display_menu(
             AnnounceInformation::new("Some Receiver", 8000),
         )); // Debug Purposes
 
-        let items: Vec<MenuItem<String, Option<usize>, SubMenuSelect, true>> =
-            discovery_to_menu_items(&discovered);
+        let items: _ = discovery_to_menu_items(&discovered);
 
         let mut menu: _ = Menu::with_style("Discovery", *style)
             .add_menu_items(items)
@@ -85,7 +80,7 @@ pub async fn discovery_display_menu(
                         if let Some(Some(index)) = index {
                             let info: Option<&DiscoveryInformation> = discovered.get(index);
                             if let Some(info) = info {
-                                discovery_display_submenu(display, layout, &discovery, info).await;
+                                discovery_submenu(display, layout, &discovery, info).await;
                             }
                         }
                     }
@@ -105,7 +100,7 @@ pub async fn discovery_display_menu(
     }
 }
 
-pub async fn discovery_display_submenu(
+pub async fn discovery_submenu(
     display: &mut GraphicsDisplay<SPIMode<'_>>,
     layout: &mut DeviceLayout,
     discovery: &MultiCastDiscovery,
@@ -116,9 +111,9 @@ pub async fn discovery_display_submenu(
 
     loop {
         embassy_futures::yield_now().await;
+
         let inputs: Vec<InputType> = layout.get_inputs().await;
-        let items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> =
-            DiscoverySubmenu::to_menu_items(info);
+        let items: _ = DiscoverySubmenu::to_menu_items(info);
 
         let mut menu: _ = Menu::with_style("Discovery", *style)
             .add_menu_items(items)

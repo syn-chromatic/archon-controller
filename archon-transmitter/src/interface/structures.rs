@@ -25,35 +25,6 @@ use embedded_menu::items::MenuItem;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-#[derive(Clone, PartialEq)]
-pub struct SelectString {
-    string: String,
-}
-
-impl SelectString {
-    pub fn new(string: String) -> Self {
-        Self { string }
-    }
-}
-
-impl SelectValue for SelectString {
-    fn marker(&self) -> &str {
-        &self.string
-    }
-}
-
-impl From<String> for SelectString {
-    fn from(value: String) -> Self {
-        SelectString::new(value)
-    }
-}
-
-impl From<&str> for SelectString {
-    fn from(value: &str) -> Self {
-        SelectString::new(value.to_string())
-    }
-}
-
 #[derive(Copy, Clone, PartialEq)]
 pub struct SubMenuSelect {
     index: Option<usize>,

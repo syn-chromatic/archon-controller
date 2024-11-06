@@ -4,8 +4,9 @@ use super::super::enums::MainMenu;
 use super::super::indicator::DynShape;
 use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
+use super::about::about_menu;
 use super::diagnostics::diagnostics_display_menu;
-use super::discovery::discovery_display_menu;
+use super::discovery::discovery_menu;
 
 use crate::devices::DevicesBuilder;
 
@@ -53,8 +54,9 @@ pub async fn main_menu(
         embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = layout.get_inputs().await;
 
+        let items: _ = MainMenu::to_menu_items();
         let mut menu: _ = Menu::with_style("Main Menu", *style)
-            .add_menu_items(MainMenu::to_menu_items())
+            .add_menu_items(items)
             .build_with_state(state);
 
         menu.update(display.get());
@@ -73,11 +75,14 @@ pub async fn main_menu(
                         if let Some(val) = val {
                             match val {
                                 MainMenu::Discovery => {
-                                    discovery_display_menu(spawner, display, layout).await;
+                                    discovery_menu(spawner, display, layout).await;
                                 }
                                 MainMenu::Settings => {}
                                 MainMenu::Diagnostics => {
                                     diagnostics_display_menu(display, layout).await;
+                                }
+                                MainMenu::About => {
+                                    about_menu(display, layout).await;
                                 }
                             }
                         }

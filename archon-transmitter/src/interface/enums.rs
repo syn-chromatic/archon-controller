@@ -1,16 +1,25 @@
 #![allow(dead_code)]
 
 use super::structures::F32Value;
-use super::structures::SelectString;
 use super::structures::U16Value;
 
+use embsys::drivers::hardware;
 use embsys::exts::std;
+use embsys::helpers;
+
+use std::string::String;
 use std::string::ToString;
 use std::vec::Vec;
+
+use hardware::HWController;
+use helpers::formatter::size::format_size;
 
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
+
+use archon_macros::ToItem;
+use archon_macros::ValueConverter;
 
 use embedded_menu::items::menu_item::SelectValue;
 use embedded_menu::items::MenuItem;
@@ -36,6 +45,8 @@ pub enum ValueEnum {
     F32(F32Value),
     U16(U16Value),
     Boolean(BooleanEnum),
+    String(String),
+    Str(&'static str),
 }
 
 impl ValueEnum {
@@ -50,107 +61,77 @@ impl ValueEnum {
     pub fn boolean(value: bool) -> Self {
         ValueEnum::Boolean(BooleanEnum::new(value))
     }
+
+    pub fn string(value: &str) -> ValueEnum {
+        ValueEnum::String(value.to_string())
+    }
+
+    pub fn str(value: &'static str) -> ValueEnum {
+        ValueEnum::Str(value)
+    }
 }
 
 impl SelectValue for ValueEnum {
     fn marker(&self) -> &str {
         match self {
-            ValueEnum::F32(f32_value) => f32_value.marker(),
-            ValueEnum::U16(u16_value) => u16_value.marker(),
-            ValueEnum::Boolean(button_enum) => button_enum.marker(),
+            ValueEnum::F32(f32) => f32.marker(),
+            ValueEnum::U16(u16) => u16.marker(),
+            ValueEnum::Boolean(boolean) => boolean.marker(),
+            ValueEnum::String(string) => string,
+            ValueEnum::Str(str) => *str,
         }
     }
 }
 
-#[derive(Copy, Clone)]
+impl From<String> for ValueEnum {
+    fn from(value: String) -> Self {
+        ValueEnum::String(value)
+    }
+}
+
+impl From<&'static str> for ValueEnum {
+    fn from(value: &'static str) -> Self {
+        ValueEnum::Str(value)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
 pub enum MainMenu {
     Discovery,
     Settings,
     Diagnostics,
+    About,
 }
 
 impl MainMenu {
-    fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match self {
             MainMenu::Discovery => "Discovery",
             MainMenu::Settings => "Settings",
             MainMenu::Diagnostics => "Diagnostics",
+            MainMenu::About => "About",
         }
     }
 
-    fn discovery_item() -> MenuItem<&'static str, Self, &'static str, true> {
-        let title_text: &str = MainMenu::Discovery.as_str();
-        let value: &str = ">";
-        MenuItem::new(title_text, value).with_value_converter(|_| MainMenu::Discovery)
-    }
+    pub fn to_menu_items<'a>() -> Vec<MenuItem<&'a str, Self, ValueEnum, true>> {
+        let mut items: _ = Vec::new();
 
-    fn settings_item() -> MenuItem<&'static str, Self, &'static str, true> {
-        let title_text: &str = MainMenu::Settings.as_str();
-        let value: &str = ">";
-        MenuItem::new(title_text, value).with_value_converter(|_| MainMenu::Settings)
-    }
-
-    fn diagnostics_item() -> MenuItem<&'static str, Self, &'static str, true> {
-        let title_text: &str = MainMenu::Diagnostics.as_str();
-        let value: &str = ">";
-        MenuItem::new(title_text, value).with_value_converter(|_| MainMenu::Diagnostics)
-    }
-}
-
-impl MainMenu {
-    pub fn to_menu_items() -> Vec<MenuItem<&'static str, Self, &'static str, true>> {
-        let mut items: Vec<_> = Vec::new();
-
-        items.push(MainMenu::discovery_item());
-        items.push(MainMenu::settings_item());
-        items.push(MainMenu::diagnostics_item());
+        items.push(MainMenu::Discovery.item(ValueEnum::str(">")));
+        items.push(MainMenu::Settings.item(ValueEnum::str(">")));
+        items.push(MainMenu::Diagnostics.item(ValueEnum::str(">")));
+        items.push(MainMenu::About.item(ValueEnum::str(">")));
 
         items
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
 pub enum DiscoverySubmenu {
     Name,
     RemoteIP,
     LocalIP,
     TCPPort,
     Connect,
-}
-
-impl DiscoverySubmenu {
-    fn name_item(
-        value: SelectString,
-    ) -> MenuItem<&'static str, DiscoverySubmenu, SelectString, true> {
-        let title_text: &str = DiscoverySubmenu::Name.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiscoverySubmenu::Name)
-    }
-
-    fn remote_ip_item(
-        value: SelectString,
-    ) -> MenuItem<&'static str, DiscoverySubmenu, SelectString, true> {
-        let title_text: &str = DiscoverySubmenu::RemoteIP.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiscoverySubmenu::RemoteIP)
-    }
-
-    fn local_ip_item(
-        value: SelectString,
-    ) -> MenuItem<&'static str, DiscoverySubmenu, SelectString, true> {
-        let title_text: &str = DiscoverySubmenu::LocalIP.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiscoverySubmenu::LocalIP)
-    }
-
-    fn tcp_port_item(
-        value: SelectString,
-    ) -> MenuItem<&'static str, DiscoverySubmenu, SelectString, true> {
-        let title_text: &str = DiscoverySubmenu::TCPPort.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiscoverySubmenu::TCPPort)
-    }
-
-    fn connect_item() -> MenuItem<&'static str, DiscoverySubmenu, SelectString, true> {
-        let title_text: &str = DiscoverySubmenu::Connect.as_str();
-        MenuItem::new(title_text, "".into()).with_value_converter(|_| DiscoverySubmenu::Connect)
-    }
 }
 
 impl DiscoverySubmenu {
@@ -166,19 +147,20 @@ impl DiscoverySubmenu {
 
     pub fn to_menu_items(
         info: &DiscoveryInformation,
-    ) -> Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> {
-        let mut items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> = Vec::new();
+    ) -> Vec<MenuItem<&str, Self, ValueEnum, true>> {
+        let mut items: _ = Vec::new();
 
-        let name: SelectString = info.announce_info().name().into();
-        let remote_addr: SelectString = info.remote_addr_string().into();
-        let local_addr: SelectString = info.local_addr_string().into();
-        let tcp_port: SelectString = info.announce_info().tcp_port().to_string().into();
+        let name: ValueEnum = info.announce_info().name().to_string().into();
+        let remote_addr: ValueEnum = info.remote_addr_string().into();
+        let local_addr: ValueEnum = info.local_addr_string().into();
+        let tcp_port: ValueEnum = info.announce_info().tcp_port().to_string().into();
+        let connect: ValueEnum = ValueEnum::Str("");
 
-        items.push(DiscoverySubmenu::name_item(name));
-        items.push(DiscoverySubmenu::remote_ip_item(remote_addr));
-        items.push(DiscoverySubmenu::local_ip_item(local_addr));
-        items.push(DiscoverySubmenu::tcp_port_item(tcp_port));
-        items.push(DiscoverySubmenu::connect_item());
+        items.push(DiscoverySubmenu::Name.item(name));
+        items.push(DiscoverySubmenu::RemoteIP.item(remote_addr));
+        items.push(DiscoverySubmenu::LocalIP.item(local_addr));
+        items.push(DiscoverySubmenu::TCPPort.item(tcp_port));
+        items.push(DiscoverySubmenu::Connect.item(connect));
 
         items
     }
@@ -191,7 +173,7 @@ impl DiscoverySubmenu {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
 pub enum DiagnosticsMenu {
     DPadUp,
     DPadRight,
@@ -200,53 +182,6 @@ pub enum DiagnosticsMenu {
     JoyStickX,
     JoyStickY,
     Rotary,
-}
-
-impl DiagnosticsMenu {
-    fn dpad_up_item(value: ValueEnum) -> MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true> {
-        let title_text: &str = DiagnosticsMenu::DPadUp.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiagnosticsMenu::DPadUp)
-    }
-
-    fn dpad_right_item(
-        value: ValueEnum,
-    ) -> MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true> {
-        let title_text: &str = DiagnosticsMenu::DPadRight.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiagnosticsMenu::DPadRight)
-    }
-
-    fn dpad_down_item(
-        value: ValueEnum,
-    ) -> MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true> {
-        let title_text: &str = DiagnosticsMenu::DPadDown.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiagnosticsMenu::DPadDown)
-    }
-
-    fn dpad_left_item(
-        value: ValueEnum,
-    ) -> MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true> {
-        let title_text: &str = DiagnosticsMenu::DPadLeft.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiagnosticsMenu::DPadLeft)
-    }
-
-    fn joystick_x_item(
-        value: ValueEnum,
-    ) -> MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true> {
-        let title_text: &str = DiagnosticsMenu::JoyStickX.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiagnosticsMenu::JoyStickX)
-    }
-
-    fn joystick_y_item(
-        value: ValueEnum,
-    ) -> MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true> {
-        let title_text: &str = DiagnosticsMenu::JoyStickY.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiagnosticsMenu::JoyStickY)
-    }
-
-    fn rotary_item(value: ValueEnum) -> MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true> {
-        let title_text: &str = DiagnosticsMenu::Rotary.as_str();
-        MenuItem::new(title_text, value).with_value_converter(|_| DiagnosticsMenu::Rotary)
-    }
 }
 
 impl DiagnosticsMenu {
@@ -264,7 +199,7 @@ impl DiagnosticsMenu {
 
     pub fn to_menu_items(
         inputs: &Vec<InputType>,
-    ) -> Vec<MenuItem<&'static str, DiagnosticsMenu, ValueEnum, true>> {
+    ) -> Vec<MenuItem<&'static str, Self, ValueEnum, true>> {
         let mut dpad_up: ValueEnum = ValueEnum::boolean(false);
         let mut dpad_right: ValueEnum = ValueEnum::boolean(false);
         let mut dpad_down: ValueEnum = ValueEnum::boolean(false);
@@ -294,13 +229,74 @@ impl DiagnosticsMenu {
         }
 
         let mut items: _ = Vec::new();
-        items.push(Self::dpad_up_item(dpad_up));
-        items.push(Self::dpad_right_item(dpad_right));
-        items.push(Self::dpad_down_item(dpad_down));
-        items.push(Self::dpad_left_item(dpad_left));
-        items.push(Self::joystick_x_item(joystick_x));
-        items.push(Self::joystick_y_item(joystick_y));
-        items.push(Self::rotary_item(rotary));
+        items.push(Self::DPadUp.item(dpad_up));
+        items.push(Self::DPadRight.item(dpad_right));
+        items.push(Self::DPadDown.item(dpad_down));
+        items.push(Self::DPadLeft.item(dpad_left));
+        items.push(Self::JoyStickX.item(joystick_x));
+        items.push(Self::JoyStickY.item(joystick_y));
+        items.push(Self::Rotary.item(rotary));
+
+        items
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
+pub enum AboutMenu {
+    CPU,
+    Frequency,
+    FreeMemory,
+    UsedMemory,
+    TotalMemory,
+    SysVoltage,
+}
+
+impl AboutMenu {
+    async fn get_sys_voltage() -> ValueEnum {
+        // Needed to disable LED to get accurate sys voltage
+        // As LED is connected to CYW43 and the chip uses GP29
+
+        let mut sys_voltage: f32 = 0.0;
+
+        if let Ok(voltage) = HWController::sys_voltage().await {
+            sys_voltage = voltage;
+        }
+
+        ValueEnum::f32(sys_voltage)
+    }
+}
+
+impl AboutMenu {
+    pub fn as_str(&self) -> &str {
+        match self {
+            AboutMenu::CPU => "CPU",
+            AboutMenu::Frequency => "Frequency",
+            AboutMenu::FreeMemory => "FreeMem",
+            AboutMenu::UsedMemory => "UsedMem",
+            AboutMenu::TotalMemory => "TotalMem",
+            AboutMenu::SysVoltage => "SysVoltage",
+        }
+    }
+
+    pub async fn to_menu_items<'a>() -> Vec<MenuItem<&'a str, Self, ValueEnum, true>> {
+        let cpu: ValueEnum = ValueEnum::Str("RP2040");
+        let frequency: ValueEnum = ValueEnum::Str("125Mhz");
+        let free_memory: ValueEnum =
+            ValueEnum::String(format_size(crate::ALLOCATOR.get_free_memory(), 1));
+        let used_memory: ValueEnum =
+            ValueEnum::String(format_size(crate::ALLOCATOR.get_used_memory(), 1));
+        let total_memory: ValueEnum =
+            ValueEnum::String(format_size(crate::ALLOCATOR.get_total_memory(), 1));
+        let sys_voltage: ValueEnum = Self::get_sys_voltage().await;
+
+        let mut items: _ = Vec::new();
+
+        items.push(AboutMenu::CPU.item(cpu));
+        items.push(AboutMenu::Frequency.item(frequency));
+        items.push(AboutMenu::FreeMemory.item(free_memory));
+        items.push(AboutMenu::UsedMemory.item(used_memory));
+        items.push(AboutMenu::TotalMemory.item(total_memory));
+        items.push(AboutMenu::SysVoltage.item(sys_voltage));
 
         items
     }

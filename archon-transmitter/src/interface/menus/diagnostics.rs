@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use super::super::enums::DiagnosticsMenu;
-use super::super::enums::ValueEnum;
 use super::super::indicator::DynShape;
 use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
@@ -19,7 +18,6 @@ use embedded_graphics::Drawable;
 use embedded_menu::interaction::Action;
 use embedded_menu::interaction::Interaction;
 use embedded_menu::interaction::Navigation;
-use embedded_menu::items::MenuItem;
 use embedded_menu::Menu;
 use embedded_menu::MenuState;
 
@@ -38,8 +36,7 @@ pub async fn diagnostics_display_menu(
         embassy_futures::yield_now().await;
 
         let inputs: Vec<InputType> = layout.get_inputs().await;
-        let items: Vec<MenuItem<&str, DiagnosticsMenu, ValueEnum, true>> =
-            DiagnosticsMenu::to_menu_items(&inputs);
+        let items: _ = DiagnosticsMenu::to_menu_items(&inputs);
 
         let mut menu: _ = Menu::with_style("Diagnostics", *style)
             .add_menu_items(items)

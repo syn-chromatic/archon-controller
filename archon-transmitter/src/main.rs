@@ -12,7 +12,7 @@ extern crate embsys;
 use embsys::crates::emballoc::Allocator;
 
 #[global_allocator]
-static ALLOCATOR: Allocator<163_840> = Allocator::new();
+pub static ALLOCATOR: Allocator<163_840> = Allocator::new();
 
 mod consts;
 mod devices;

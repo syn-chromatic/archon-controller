@@ -1,11 +1,15 @@
 [workspace]
 resolver = "2"
-members = ["archon-core", "archon-receiver", "archon-transmitter"]
+members = ["archon-core", "archon-receiver", "archon-transmitter", "archon-macros"]
 
 
 # Dependencies
 [workspace.dependencies.archon_core]
 path = "./archon-core"
+
+
+[workspace.dependencies.archon-macros]
+path = "./archon-macros"
 
 
 [workspace.dependencies.embsys]

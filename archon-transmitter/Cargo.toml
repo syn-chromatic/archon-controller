@@ -14,6 +14,10 @@ bench = false
 workspace = true
 
 
+[dependencies.archon-macros]
+workspace = true
+
+
 [dependencies.embsys]
 workspace = true
 
