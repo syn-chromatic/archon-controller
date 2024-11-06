@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use super::super::enums::SettingsMenu;
+use super::super::enums::WIFIConnect;
 use super::super::enums::WIFISubmenu;
 use super::super::indicator::DynShape;
 use super::super::style::DynMenuStyle;
@@ -121,11 +122,16 @@ pub async fn wifi_submenu(
                     DPad::Right => {
                         if let Some(value) = menu.interact(Interaction::Action(Action::Select)) {
                             match value {
-                                WIFISubmenu::Connect => {
-                                    let wifi_task: Task = Task::new(spawner, wifi_connect);
-                                    let _ = wifi_task.start();
-                                }
-                                WIFISubmenu::Disconnect => WIFIController::as_mut().leave().await,
+                                WIFISubmenu::Connect(connect) => match connect {
+                                    WIFIConnect::Connect => {
+                                        let wifi_task: Task = Task::new(spawner, wifi_connect);
+                                        let _ = wifi_task.start();
+                                    }
+                                    WIFIConnect::Connecting => {}
+                                    WIFIConnect::Disconnect => {
+                                        WIFIController::as_mut().leave().await
+                                    }
+                                },
                                 _ => {}
                             }
                         }

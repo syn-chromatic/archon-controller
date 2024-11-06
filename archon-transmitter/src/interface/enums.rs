@@ -209,17 +209,54 @@ impl SettingsMenu {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
-pub enum WIFISubmenu {
-    SSID,
-    Status,
-    Address,
+#[derive(Copy, Clone, PartialEq)]
+pub enum WIFIConnect {
     Connect,
     Connecting,
     Disconnect,
 }
 
+impl WIFIConnect {
+    pub fn as_str(&self) -> &str {
+        match self {
+            WIFIConnect::Connect => "Connect",
+            WIFIConnect::Connecting => "Connecting",
+            WIFIConnect::Disconnect => "Disconnect",
+        }
+    }
+
+    pub fn value_converter(&self) -> fn(ValueEnum) -> WIFISubmenu {
+        match self {
+            WIFIConnect::Connect => |_| WIFISubmenu::Connect(WIFIConnect::Connect),
+            WIFIConnect::Connecting => |_| WIFISubmenu::Connect(WIFIConnect::Connecting),
+            WIFIConnect::Disconnect => |_| WIFISubmenu::Connect(WIFIConnect::Disconnect),
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum WIFISubmenu {
+    SSID,
+    Status,
+    Address,
+    Connect(WIFIConnect),
+}
+
 impl WIFISubmenu {
+    fn value_converter(&self) -> fn(ValueEnum) -> Self {
+        match self {
+            WIFISubmenu::SSID => |_| WIFISubmenu::SSID,
+            WIFISubmenu::Status => |_| WIFISubmenu::Status,
+            WIFISubmenu::Address => |_| WIFISubmenu::Address,
+            WIFISubmenu::Connect(connect) => connect.value_converter(),
+        }
+    }
+
+    fn item(&self, value: ValueEnum) -> MenuItem<&str, Self, ValueEnum, true> {
+        let title_text = self.as_str();
+        MenuItem::new(title_text, value).with_value_converter(self.value_converter())
+    }
+
     fn get_ssid(state: &WIFIState) -> ValueEnum {
         if let Some(link) = &state.link {
             return ValueEnum::string(&link.ssid);
@@ -250,16 +287,30 @@ impl WIFISubmenu {
         ValueEnum::str("Unassigned")
     }
 
-    fn get_connection(state: &WIFIState) -> MenuItem<&'static str, Self, ValueEnum, true> {
+    fn get_connection(state: &WIFIState) -> WIFIConnect {
         match state.status {
-            WIFIStatus::Idle => WIFISubmenu::Connect.item(ValueEnum::empty()),
-            WIFIStatus::JoiningNetwork => WIFISubmenu::Connecting.item(ValueEnum::empty()),
-            WIFIStatus::JoiningNetworkFailed => WIFISubmenu::Connect.item(ValueEnum::empty()),
-            WIFIStatus::ConfiguringDHCP => WIFISubmenu::Connecting.item(ValueEnum::empty()),
-            WIFIStatus::ConfiguringDHCPFailed => WIFISubmenu::Connect.item(ValueEnum::empty()),
-            WIFIStatus::ConnectedUnassigned => WIFISubmenu::Disconnect.item(ValueEnum::empty()),
-            WIFIStatus::ConnectedDHCP => WIFISubmenu::Disconnect.item(ValueEnum::empty()),
-            WIFIStatus::ConnectedStatic => WIFISubmenu::Disconnect.item(ValueEnum::empty()),
+            WIFIStatus::Idle => WIFIConnect::Connect,
+            WIFIStatus::JoiningNetwork => WIFIConnect::Connecting,
+            WIFIStatus::JoiningNetworkFailed => WIFIConnect::Connect,
+            WIFIStatus::ConfiguringDHCP => WIFIConnect::Connecting,
+            WIFIStatus::ConfiguringDHCPFailed => WIFIConnect::Connect,
+            WIFIStatus::ConnectedUnassigned => WIFIConnect::Disconnect,
+            WIFIStatus::ConnectedDHCP => WIFIConnect::Disconnect,
+            WIFIStatus::ConnectedStatic => WIFIConnect::Disconnect,
+        }
+    }
+
+    fn get_connection_item(connect: WIFIConnect) -> MenuItem<&'static str, Self, ValueEnum, true> {
+        match connect {
+            WIFIConnect::Connect => {
+                WIFISubmenu::Connect(WIFIConnect::Connect).item(ValueEnum::empty())
+            }
+            WIFIConnect::Connecting => {
+                WIFISubmenu::Connect(WIFIConnect::Connecting).item(ValueEnum::empty())
+            }
+            WIFIConnect::Disconnect => {
+                WIFISubmenu::Connect(WIFIConnect::Disconnect).item(ValueEnum::empty())
+            }
         }
     }
 }
@@ -270,9 +321,7 @@ impl WIFISubmenu {
             WIFISubmenu::SSID => "SSID",
             WIFISubmenu::Status => "Stat",
             WIFISubmenu::Address => "Addr",
-            WIFISubmenu::Connect => "Connect",
-            WIFISubmenu::Connecting => "Connecting..",
-            WIFISubmenu::Disconnect => "Disconnect",
+            WIFISubmenu::Connect(connect) => connect.as_str(),
         }
     }
 
@@ -282,13 +331,14 @@ impl WIFISubmenu {
         let ssid: ValueEnum = Self::get_ssid(&state);
         let status: ValueEnum = Self::get_status(&state);
         let addr: ValueEnum = Self::get_address();
+        let connect: WIFIConnect = Self::get_connection(&state);
 
         let mut items: _ = Vec::new();
 
         items.push(WIFISubmenu::SSID.item(ssid));
         items.push(WIFISubmenu::Status.item(status));
         items.push(WIFISubmenu::Address.item(addr));
-        items.push(Self::get_connection(&state));
+        items.push(Self::get_connection_item(connect));
 
         items
     }
@@ -297,9 +347,7 @@ impl WIFISubmenu {
 impl ActionableSelect for WIFISubmenu {
     fn is_actionable(&self) -> bool {
         match self {
-            WIFISubmenu::Connect => true,
-            WIFISubmenu::Connecting => true,
-            WIFISubmenu::Disconnect => true,
+            WIFISubmenu::Connect(_) => true,
             _ => false,
         }
     }
