@@ -80,7 +80,7 @@ pub async fn main_menu(
                                     discovery_menu(spawner, display, layout).await;
                                 }
                                 MainMenu::Settings => {
-                                    settings_menu(display, layout).await;
+                                    settings_menu(spawner, display, layout).await;
                                 }
                                 MainMenu::Diagnostics => {
                                     diagnostics_menu(display, layout).await;

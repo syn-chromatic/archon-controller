@@ -9,13 +9,21 @@ use super::super::traits::ActionableSelect;
 
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
+use crate::tasks::wifi_connect;
 
+use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
 use embsys::crates::embedded_graphics;
+use embsys::drivers::hardware;
 use embsys::exts::std;
+use embsys::helpers;
 
 use std::vec::Vec;
 
+use hardware::WIFIController;
+use helpers::task_handler::Task;
+
+use embassy_executor::SendSpawner;
 use embedded_graphics::Drawable;
 use embedded_menu::interaction::Action;
 use embedded_menu::interaction::Interaction;
@@ -27,7 +35,11 @@ use archon_core::devices::layout::DeviceLayout;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-pub async fn settings_menu(display: &mut GraphicsDisplay<SPIMode<'_>>, layout: &mut DeviceLayout) {
+pub async fn settings_menu(
+    spawner: SendSpawner,
+    display: &mut GraphicsDisplay<SPIMode<'_>>,
+    layout: &mut DeviceLayout,
+) {
     let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
     let mut state: _ = MenuState::default();
 
@@ -56,7 +68,7 @@ pub async fn settings_menu(display: &mut GraphicsDisplay<SPIMode<'_>>, layout: &
                         if let Some(value) = menu.interact(Interaction::Action(Action::Select)) {
                             match value {
                                 SettingsMenu::WIFI => {
-                                    wifi_submenu(display, layout).await;
+                                    wifi_submenu(spawner, display, layout).await;
                                 }
                             }
                         }
@@ -76,7 +88,11 @@ pub async fn settings_menu(display: &mut GraphicsDisplay<SPIMode<'_>>, layout: &
     }
 }
 
-pub async fn wifi_submenu(display: &mut GraphicsDisplay<SPIMode<'_>>, layout: &mut DeviceLayout) {
+pub async fn wifi_submenu(
+    spawner: SendSpawner,
+    display: &mut GraphicsDisplay<SPIMode<'_>>,
+    layout: &mut DeviceLayout,
+) {
     let mut style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
     let mut state: _ = MenuState::default();
 
@@ -105,8 +121,11 @@ pub async fn wifi_submenu(display: &mut GraphicsDisplay<SPIMode<'_>>, layout: &m
                     DPad::Right => {
                         if let Some(value) = menu.interact(Interaction::Action(Action::Select)) {
                             match value {
-                                WIFISubmenu::Connect => {}
-                                WIFISubmenu::Disconnect => {}
+                                WIFISubmenu::Connect => {
+                                    let wifi_task: Task = Task::new(spawner, wifi_connect);
+                                    let _ = wifi_task.start();
+                                }
+                                WIFISubmenu::Disconnect => WIFIController::as_mut().leave().await,
                                 _ => {}
                             }
                         }
