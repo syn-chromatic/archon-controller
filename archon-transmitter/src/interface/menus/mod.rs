@@ -1,3 +1,4 @@
+mod about;
 mod diagnostics;
 mod discovery;
 mod main;

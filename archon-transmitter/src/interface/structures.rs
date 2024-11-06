@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 
-use super::enums::ButtonEnum;
+use super::enums::BooleanEnum;
+use super::enums::ValueEnum;
 
 use embsys::crates::embassy_rp;
 use embsys::crates::embassy_time;
@@ -131,121 +132,5 @@ impl From<f32> for F32Value {
 impl SelectValue for F32Value {
     fn marker(&self) -> &str {
         &self.value_str
-    }
-}
-
-#[derive(Clone, PartialEq)]
-pub enum InputStateEnum {
-    F32(F32Value),
-    U16(U16Value),
-    Button(ButtonEnum),
-}
-
-impl InputStateEnum {
-    pub fn u16(value: u16) -> Self {
-        InputStateEnum::U16(U16Value::new(value))
-    }
-
-    pub fn f32(value: f32) -> Self {
-        InputStateEnum::F32(F32Value::new(value))
-    }
-
-    pub fn button(value: bool) -> Self {
-        InputStateEnum::Button(ButtonEnum::new(value))
-    }
-}
-
-impl SelectValue for InputStateEnum {
-    fn marker(&self) -> &str {
-        match self {
-            InputStateEnum::F32(f32_value) => f32_value.marker(),
-            InputStateEnum::U16(u16_value) => u16_value.marker(),
-            InputStateEnum::Button(button_enum) => button_enum.marker(),
-        }
-    }
-}
-
-pub struct InputState {
-    pub sys_voltage: InputStateEnum,
-    pub dpad_up: InputStateEnum,
-    pub dpad_right: InputStateEnum,
-    pub dpad_down: InputStateEnum,
-    pub dpad_left: InputStateEnum,
-    pub joystick_x: InputStateEnum,
-    pub joystick_y: InputStateEnum,
-    pub rotary: InputStateEnum,
-}
-
-impl InputState {
-    async fn get_sys_voltage() -> InputStateEnum {
-        // Needed to disable LED to get accurate sys voltage
-        // As LED is connected to CYW43 and the chip uses GP29
-
-        let mut sys_voltage: f32 = 0.0;
-
-        if let Ok(voltage) = HWController::sys_voltage().await {
-            sys_voltage = voltage;
-        }
-
-        InputStateEnum::f32(sys_voltage)
-    }
-}
-
-impl InputState {
-    pub async fn from_inputs(inputs: &Vec<InputType>) -> Result<Self, AdcError> {
-        let sys_voltage: InputStateEnum = Self::get_sys_voltage().await;
-        let mut dpad_up: InputStateEnum = InputStateEnum::button(false);
-        let mut dpad_right: InputStateEnum = InputStateEnum::button(false);
-        let mut dpad_down: InputStateEnum = InputStateEnum::button(false);
-        let mut dpad_left: InputStateEnum = InputStateEnum::button(false);
-        let mut joystick_x: InputStateEnum = InputStateEnum::u16(0);
-        let mut joystick_y: InputStateEnum = InputStateEnum::u16(0);
-        let mut rotary: InputStateEnum = InputStateEnum::u16(0);
-
-        for input in inputs {
-            match input {
-                InputType::DPad(input_dpad) => match input_dpad.dpad() {
-                    DPad::Up => dpad_up = InputStateEnum::button(true),
-                    DPad::Right => dpad_right = InputStateEnum::button(true),
-                    DPad::Down => dpad_down = InputStateEnum::button(true),
-                    DPad::Left => dpad_left = InputStateEnum::button(true),
-                },
-                InputType::JoyStick(input_joy_stick) => {
-                    joystick_x = InputStateEnum::u16(input_joy_stick.x());
-                    joystick_y = InputStateEnum::u16(input_joy_stick.y());
-                }
-                InputType::ASCII(_input_ascii) => {}
-                InputType::Rotary(input_rotary) => {
-                    rotary = InputStateEnum::u16(input_rotary.value());
-                }
-                InputType::Button(_input_button) => {}
-            }
-        }
-
-        Ok(InputState {
-            sys_voltage,
-            dpad_up,
-            dpad_right,
-            dpad_down,
-            dpad_left,
-            joystick_x,
-            joystick_y,
-            rotary,
-        })
-    }
-
-    pub fn to_menu_items(&self) -> Vec<MenuItem<&str, (), InputStateEnum, true>> {
-        let mut items: Vec<MenuItem<&str, (), InputStateEnum, true>> = Vec::new();
-
-        items.push(MenuItem::new(" SYS VOLTAGE", self.sys_voltage.clone()));
-        items.push(MenuItem::new(" DPAD UP", self.dpad_up.clone()));
-        items.push(MenuItem::new(" DPAD RIGHT", self.dpad_right.clone()));
-        items.push(MenuItem::new(" DPAD DOWN", self.dpad_down.clone()));
-        items.push(MenuItem::new(" DPAD LEFT", self.dpad_left.clone()));
-        items.push(MenuItem::new(" JOYSTICK X", self.joystick_x.clone()));
-        items.push(MenuItem::new(" JOYSTICK Y", self.joystick_y.clone()));
-        items.push(MenuItem::new(" ROTARY", self.rotary.clone()));
-
-        items
     }
 }

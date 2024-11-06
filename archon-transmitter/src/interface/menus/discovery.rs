@@ -6,7 +6,6 @@ use super::super::structures::SelectString;
 use super::super::structures::SubMenuSelect;
 use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
-use super::super::utils::discovery_submenu_items;
 use super::super::utils::discovery_to_menu_items;
 
 use crate::display::GraphicsDisplay;
@@ -119,7 +118,7 @@ pub async fn discovery_display_submenu(
         embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = layout.get_inputs().await;
         let items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> =
-            discovery_submenu_items(info);
+            DiscoverySubmenu::to_menu_items(info);
 
         let mut menu: _ = Menu::with_style("Discovery", *style)
             .add_menu_items(items)

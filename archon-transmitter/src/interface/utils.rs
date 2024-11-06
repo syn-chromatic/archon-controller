@@ -1,5 +1,3 @@
-use super::enums::DiscoverySubmenu;
-use super::structures::SelectString;
 use super::structures::SubMenuSelect;
 
 use embsys::exts::std;
@@ -30,25 +28,6 @@ pub fn discovery_to_menu_items(
                 .with_value_converter(|select| select.index()),
         );
     }
-
-    items
-}
-
-pub fn discovery_submenu_items(
-    info: &DiscoveryInformation,
-) -> Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> {
-    let mut items: Vec<MenuItem<&str, DiscoverySubmenu, SelectString, true>> = Vec::new();
-
-    let name: SelectString = info.announce_info().name().into();
-    let remote_addr: SelectString = info.remote_addr_string().into();
-    let local_addr: SelectString = info.local_addr_string().into();
-    let tcp_port: SelectString = info.announce_info().tcp_port().to_string().into();
-
-    items.push(DiscoverySubmenu::name_item(name));
-    items.push(DiscoverySubmenu::remote_ip_item(remote_addr));
-    items.push(DiscoverySubmenu::local_ip_item(local_addr));
-    items.push(DiscoverySubmenu::tcp_port_item(tcp_port));
-    items.push(DiscoverySubmenu::connect_item());
 
     items
 }
