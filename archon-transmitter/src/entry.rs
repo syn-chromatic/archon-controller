@@ -1,14 +1,15 @@
-#[allow(unused_imports)]
-use crate::tests;
+#![allow(dead_code)]
+#![allow(unused_imports)]
 
 use crate::tasks::archon_collect;
 use crate::tasks::archon_send;
 use crate::tasks::wifi_connect;
+use crate::tests;
 use crate::transmitter::ArchonTransmitter;
 
 use crate::devices::DevicesBuilder;
 
-use crate::menu::menu_interface;
+use crate::interface::start_interface;
 
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
@@ -87,7 +88,7 @@ async fn entry(spawner: Spawner) {
         defmt::info!("ADDRESS: {:?}", address);
     }
 
-    menu_interface(send_spawner).await;
+    start_interface(send_spawner).await;
 
     // let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
     // let _ = discovery.join().await;

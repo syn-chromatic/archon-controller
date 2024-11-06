@@ -1,18 +1,14 @@
-use super::enums::DiscoverySubmenu;
-use super::enums::MainMenu;
-use super::indicator::DynShape;
-use super::structures::InputState;
-use super::structures::InputStateEnum;
-use super::structures::SelectString;
-use super::structures::SubMenuSelect;
-use super::style::DynMenuStyle;
-use super::theme::StandardTheme;
-use super::utils::discovery_submenu_items;
-use super::utils::discovery_to_menu_items;
+#![allow(dead_code)]
 
-use crate::devices::DevicesBuilder;
+use super::super::enums::DiscoverySubmenu;
+use super::super::indicator::DynShape;
+use super::super::structures::SelectString;
+use super::super::structures::SubMenuSelect;
+use super::super::style::DynMenuStyle;
+use super::super::theme::StandardTheme;
+use super::super::utils::discovery_submenu_items;
+use super::super::utils::discovery_to_menu_items;
 
-use crate::display::setup_display;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
 
@@ -42,67 +38,6 @@ use archon_core::discovery::DiscoveryStatus;
 use archon_core::discovery::MultiCastDiscovery;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
-
-pub async fn menu_interface(spawner: SendSpawner) {
-    let mut layout: DeviceLayout = DeviceLayout::new();
-    DevicesBuilder::build(&mut layout).await;
-
-    let mut display: GraphicsDisplay<SPIMode<'_>> = setup_display();
-    main_menu(spawner, &mut display, &mut layout).await;
-}
-
-pub async fn main_menu(
-    spawner: SendSpawner,
-    display: &mut GraphicsDisplay<SPIMode<'_>>,
-    layout: &mut DeviceLayout,
-) {
-    let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
-    let mut state: _ = MenuState::default();
-
-    loop {
-        embassy_futures::yield_now().await;
-        let inputs: Vec<InputType> = layout.get_inputs().await;
-
-        let mut menu: _ = Menu::with_style("Main Menu", *style)
-            .add_menu_items(MainMenu::to_menu_items())
-            .build_with_state(state);
-
-        menu.update(display.get());
-        menu.draw(display.get()).unwrap();
-
-        display.refresh();
-
-        for input in inputs {
-            match input {
-                InputType::DPad(input_dpad) => match input_dpad.dpad() {
-                    DPad::Up => {
-                        menu.interact(Interaction::Navigation(Navigation::Previous));
-                    }
-                    DPad::Right => {
-                        let val = menu.interact(Interaction::Action(Action::Select));
-                        if let Some(val) = val {
-                            match val {
-                                MainMenu::Discovery => {
-                                    discovery_display_menu(spawner, display, layout).await;
-                                }
-                                MainMenu::Settings => {}
-                                MainMenu::Diagnostics => {
-                                    diagnostics_display_menu(display, layout).await;
-                                }
-                            }
-                        }
-                    }
-                    DPad::Down => {
-                        menu.interact(Interaction::Navigation(Navigation::Next));
-                    }
-                    DPad::Left => {}
-                },
-                _ => {}
-            }
-        }
-        state = menu.state();
-    }
-}
 
 pub async fn discovery_display_menu(
     spawner: SendSpawner,
@@ -229,55 +164,6 @@ pub async fn discovery_display_submenu(
             }
         }
 
-        state = menu.state();
-    }
-}
-
-pub async fn diagnostics_display_menu(
-    display: &mut GraphicsDisplay<SPIMode<'_>>,
-    layout: &mut DeviceLayout,
-) {
-    let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Hidden);
-    let mut state: _ = MenuState::default();
-
-    loop {
-        embassy_futures::yield_now().await;
-
-        let inputs: Vec<InputType> = layout.get_inputs().await;
-        let input_state: InputState = match InputState::from_inputs(&inputs).await {
-            Ok(state) => state,
-            Err(_) => continue,
-        };
-        let items: Vec<MenuItem<&str, (), InputStateEnum, true>> = input_state.to_menu_items();
-
-        let mut menu: _ = Menu::with_style("Diagnostics", *style)
-            .add_menu_items(items)
-            .build_with_state(state);
-
-        menu.update(display.get());
-        menu.draw(display.get()).unwrap();
-
-        display.refresh();
-
-        for input in inputs {
-            match input {
-                InputType::DPad(input_dpad) => match input_dpad.dpad() {
-                    DPad::Up => {
-                        menu.interact(Interaction::Navigation(Navigation::Previous));
-                    }
-                    DPad::Right => {
-                        menu.interact(Interaction::Action(Action::Select));
-                    }
-                    DPad::Down => {
-                        menu.interact(Interaction::Navigation(Navigation::Next));
-                    }
-                    DPad::Left => {
-                        return;
-                    }
-                },
-                _ => {}
-            }
-        }
         state = menu.state();
     }
 }

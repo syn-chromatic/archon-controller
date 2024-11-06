@@ -18,7 +18,7 @@ mod consts;
 mod devices;
 mod display;
 mod entry;
-mod menu;
+mod interface;
 mod tasks;
 mod tests;
 mod transmitter;
