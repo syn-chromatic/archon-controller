@@ -7,6 +7,7 @@ use super::super::theme::StandardTheme;
 use super::about::about_menu;
 use super::diagnostics::diagnostics_menu;
 use super::discovery::discovery_menu;
+use super::settings::settings_menu;
 
 use crate::devices::DevicesBuilder;
 
@@ -71,13 +72,16 @@ pub async fn main_menu(
                         menu.interact(Interaction::Navigation(Navigation::Previous));
                     }
                     DPad::Right => {
-                        let val: Option<MainMenu> = menu.interact(Interaction::Action(Action::Select));
+                        let val: Option<MainMenu> =
+                            menu.interact(Interaction::Action(Action::Select));
                         if let Some(val) = val {
                             match val {
                                 MainMenu::Discovery => {
                                     discovery_menu(spawner, display, layout).await;
                                 }
-                                MainMenu::Settings => {}
+                                MainMenu::Settings => {
+                                    settings_menu(display, layout).await;
+                                }
                                 MainMenu::Diagnostics => {
                                     diagnostics_menu(display, layout).await;
                                 }

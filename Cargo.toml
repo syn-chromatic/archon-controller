@@ -14,7 +14,7 @@ path = "./archon-macros"
 
 [workspace.dependencies.embsys]
 git = "https://github.com/syn-chromatic/embsys-rs.git"
-rev = "c60b0199b9b1d64be93c41c6c8efa17404a36814"
+rev = "47dff646add13806b81a7a1d5ecde332884d11f5"
 package = "embsys"
 features = ["rp2040-probe"]
 

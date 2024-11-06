@@ -13,11 +13,15 @@ use std::string::ToString;
 use std::vec::Vec;
 
 use hardware::HWController;
+use hardware::WIFIController;
+use hardware::WIFIState;
+use hardware::WIFIStatus;
 use helpers::formatter::size::format_size;
 
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
+use archon_core::utils::addr_bytes_to_string;
 
 use archon_macros::ToItem;
 use archon_macros::ValueConverter;
@@ -171,6 +175,105 @@ impl ActionableSelect for DiscoverySubmenu {
     fn is_actionable(&self) -> bool {
         match self {
             DiscoverySubmenu::Connect => true,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
+pub enum SettingsMenu {
+    WIFI,
+}
+
+impl SettingsMenu {
+    pub fn as_str(&self) -> &str {
+        match self {
+            SettingsMenu::WIFI => "Wi-Fi",
+        }
+    }
+
+    pub fn to_menu_items<'a>() -> Vec<MenuItem<&'a str, Self, ValueEnum, true>> {
+        let mut items: _ = Vec::new();
+
+        items.push(SettingsMenu::WIFI.item(ValueEnum::str(">")));
+
+        items
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
+pub enum WIFISubmenu {
+    SSID,
+    Status,
+    Address,
+    Connect,
+}
+
+impl WIFISubmenu {
+    fn get_ssid(state: &WIFIState) -> ValueEnum {
+        if let Some(link) = &state.link {
+            return ValueEnum::string(&link.ssid);
+        }
+        ValueEnum::string("")
+    }
+
+    fn get_status(state: &WIFIState) -> ValueEnum {
+        match state.status {
+            WIFIStatus::Idle => ValueEnum::str("Idle"),
+            WIFIStatus::JoiningNetwork => ValueEnum::str("Joining"),
+            WIFIStatus::JoiningNetworkFailed => ValueEnum::str("JoinFailed"),
+            WIFIStatus::ConfiguringDHCP => ValueEnum::str("DHCPSetup"),
+            WIFIStatus::ConfiguringDHCPFailed => ValueEnum::str("DHCPFailed"),
+            WIFIStatus::ConnectedUnassigned => ValueEnum::str("Connected"),
+            WIFIStatus::ConnectedDHCP => ValueEnum::str("Connected"),
+            WIFIStatus::ConnectedStatic => ValueEnum::str("Connected"),
+        }
+    }
+
+    fn get_address() -> ValueEnum {
+        if let Some(config) = WIFIController::as_mut().get_config_v4() {
+            let addr_bytes: [u8; 4] = config.address.address().octets();
+            let addr_string: String = addr_bytes_to_string(addr_bytes);
+            return ValueEnum::String(addr_string);
+        }
+
+        ValueEnum::str("Unassigned")
+    }
+}
+
+impl WIFISubmenu {
+    pub fn as_str(&self) -> &str {
+        match self {
+            WIFISubmenu::SSID => "SSID",
+            WIFISubmenu::Status => "Stat",
+            WIFISubmenu::Address => "Addr",
+            WIFISubmenu::Connect => "Connect",
+        }
+    }
+
+    pub fn to_menu_items<'a>() -> Vec<MenuItem<&'a str, Self, ValueEnum, true>> {
+        let state: WIFIState = WIFIController::state();
+
+        let ssid: ValueEnum = Self::get_ssid(&state);
+        let status: ValueEnum = Self::get_status(&state);
+        let addr: ValueEnum = Self::get_address();
+        let connect: ValueEnum = ValueEnum::str("");
+
+        let mut items: _ = Vec::new();
+
+        items.push(WIFISubmenu::SSID.item(ssid));
+        items.push(WIFISubmenu::Status.item(status));
+        items.push(WIFISubmenu::Address.item(addr));
+        items.push(WIFISubmenu::Connect.item(connect));
+
+        items
+    }
+}
+
+impl ActionableSelect for WIFISubmenu {
+    fn is_actionable(&self) -> bool {
+        match self {
+            WIFISubmenu::Connect => true,
             _ => false,
         }
     }
