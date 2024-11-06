@@ -4,6 +4,7 @@ use super::super::enums::DiscoverySubmenu;
 use super::super::indicator::DynShape;
 use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
+use super::super::traits::ActionableSelect;
 use super::super::utils::discovery_to_menu_items;
 
 use crate::display::GraphicsDisplay;
@@ -119,11 +120,7 @@ pub async fn discovery_submenu(
             .add_menu_items(items)
             .build_with_state(state);
 
-        match menu.selected_value().is_actionable() {
-            true => style.set_indicator(DynShape::FilledBorder),
-            false => style.set_indicator(DynShape::Triangle),
-        }
-
+        menu.selected_value().set_indicator(&mut style);
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
 

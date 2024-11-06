@@ -2,6 +2,7 @@
 
 use super::structures::F32Value;
 use super::structures::U16Value;
+use super::traits::ActionableSelect;
 
 use embsys::drivers::hardware;
 use embsys::exts::std;
@@ -164,8 +165,10 @@ impl DiscoverySubmenu {
 
         items
     }
+}
 
-    pub fn is_actionable(&self) -> bool {
+impl ActionableSelect for DiscoverySubmenu {
+    fn is_actionable(&self) -> bool {
         match self {
             DiscoverySubmenu::Connect => true,
             _ => false,

@@ -71,7 +71,7 @@ pub async fn main_menu(
                         menu.interact(Interaction::Navigation(Navigation::Previous));
                     }
                     DPad::Right => {
-                        let val = menu.interact(Interaction::Action(Action::Select));
+                        let val: Option<MainMenu> = menu.interact(Interaction::Action(Action::Select));
                         if let Some(val) = val {
                             match val {
                                 MainMenu::Discovery => {
