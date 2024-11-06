@@ -24,7 +24,7 @@ pub fn discovery_to_menu_items(
 
     if items.len() == 0 {
         items.push(
-            MenuItem::new(" No Devices..".to_string(), SubMenuSelect::default())
+            MenuItem::new("No Devices..".to_string(), SubMenuSelect::default())
                 .with_value_converter(|select| select.index()),
         );
     }
