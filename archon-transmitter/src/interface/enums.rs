@@ -74,6 +74,10 @@ impl ValueEnum {
     pub fn str(value: &'static str) -> ValueEnum {
         ValueEnum::Str(value)
     }
+
+    pub fn empty() -> ValueEnum {
+        ValueEnum::Str("")
+    }
 }
 
 impl SelectValue for ValueEnum {
@@ -159,7 +163,7 @@ impl DiscoverySubmenu {
         let remote_addr: ValueEnum = info.remote_addr_string().into();
         let local_addr: ValueEnum = info.local_addr_string().into();
         let tcp_port: ValueEnum = info.announce_info().tcp_port().to_string().into();
-        let connect: ValueEnum = ValueEnum::Str("");
+        let connect: ValueEnum = ValueEnum::empty();
 
         items.push(DiscoverySubmenu::Name.item(name));
         items.push(DiscoverySubmenu::RemoteIP.item(remote_addr));
@@ -257,7 +261,7 @@ impl WIFISubmenu {
         let ssid: ValueEnum = Self::get_ssid(&state);
         let status: ValueEnum = Self::get_status(&state);
         let addr: ValueEnum = Self::get_address();
-        let connect: ValueEnum = ValueEnum::str("");
+        let connect: ValueEnum = ValueEnum::empty();
 
         let mut items: _ = Vec::new();
 
