@@ -215,6 +215,8 @@ pub enum WIFISubmenu {
     Status,
     Address,
     Connect,
+    Connecting,
+    Disconnect,
 }
 
 impl WIFISubmenu {
@@ -247,6 +249,19 @@ impl WIFISubmenu {
 
         ValueEnum::str("Unassigned")
     }
+
+    fn get_connection(state: &WIFIState) -> MenuItem<&'static str, Self, ValueEnum, true> {
+        match state.status {
+            WIFIStatus::Idle => WIFISubmenu::Connect.item(ValueEnum::empty()),
+            WIFIStatus::JoiningNetwork => WIFISubmenu::Connecting.item(ValueEnum::empty()),
+            WIFIStatus::JoiningNetworkFailed => WIFISubmenu::Connect.item(ValueEnum::empty()),
+            WIFIStatus::ConfiguringDHCP => WIFISubmenu::Connecting.item(ValueEnum::empty()),
+            WIFIStatus::ConfiguringDHCPFailed => WIFISubmenu::Connect.item(ValueEnum::empty()),
+            WIFIStatus::ConnectedUnassigned => WIFISubmenu::Disconnect.item(ValueEnum::empty()),
+            WIFIStatus::ConnectedDHCP => WIFISubmenu::Disconnect.item(ValueEnum::empty()),
+            WIFIStatus::ConnectedStatic => WIFISubmenu::Disconnect.item(ValueEnum::empty()),
+        }
+    }
 }
 
 impl WIFISubmenu {
@@ -256,6 +271,8 @@ impl WIFISubmenu {
             WIFISubmenu::Status => "Stat",
             WIFISubmenu::Address => "Addr",
             WIFISubmenu::Connect => "Connect",
+            WIFISubmenu::Connecting => "Connecting..",
+            WIFISubmenu::Disconnect => "Disconnect",
         }
     }
 
@@ -265,14 +282,13 @@ impl WIFISubmenu {
         let ssid: ValueEnum = Self::get_ssid(&state);
         let status: ValueEnum = Self::get_status(&state);
         let addr: ValueEnum = Self::get_address();
-        let connect: ValueEnum = ValueEnum::empty();
 
         let mut items: _ = Vec::new();
 
         items.push(WIFISubmenu::SSID.item(ssid));
         items.push(WIFISubmenu::Status.item(status));
         items.push(WIFISubmenu::Address.item(addr));
-        items.push(WIFISubmenu::Connect.item(connect));
+        items.push(Self::get_connection(&state));
 
         items
     }
@@ -282,6 +298,8 @@ impl ActionableSelect for WIFISubmenu {
     fn is_actionable(&self) -> bool {
         match self {
             WIFISubmenu::Connect => true,
+            WIFISubmenu::Connecting => true,
+            WIFISubmenu::Disconnect => true,
             _ => false,
         }
     }

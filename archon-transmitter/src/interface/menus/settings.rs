@@ -106,6 +106,7 @@ pub async fn wifi_submenu(display: &mut GraphicsDisplay<SPIMode<'_>>, layout: &m
                         if let Some(value) = menu.interact(Interaction::Action(Action::Select)) {
                             match value {
                                 WIFISubmenu::Connect => {}
+                                WIFISubmenu::Disconnect => {}
                                 _ => {}
                             }
                         }
