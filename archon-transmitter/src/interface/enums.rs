@@ -138,13 +138,77 @@ impl MainMenu {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
+#[derive(Copy, Clone, PartialEq)]
+pub enum DiscoveryConnect {
+    Connect,
+    Connecting,
+    Disconnect,
+}
+
+impl DiscoveryConnect {
+    fn value_converter(&self) -> fn(ValueEnum) -> DiscoverySubmenu {
+        match self {
+            Self::Connect => |_| DiscoverySubmenu::Connect(Self::Connect),
+            Self::Connecting => |_| DiscoverySubmenu::Connect(Self::Connecting),
+            Self::Disconnect => |_| DiscoverySubmenu::Connect(Self::Disconnect),
+        }
+    }
+}
+
+impl DiscoveryConnect {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Connect => "Connect",
+            Self::Connecting => "Connecting",
+            Self::Disconnect => "Disconnect",
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
 pub enum DiscoverySubmenu {
     Name,
     RemoteIP,
     LocalIP,
     TCPPort,
-    Connect,
+    Connect(DiscoveryConnect),
+}
+
+impl DiscoverySubmenu {
+    fn value_converter(&self) -> fn(ValueEnum) -> Self {
+        match self {
+            Self::Name => |_| Self::Name,
+            Self::RemoteIP => |_| Self::RemoteIP,
+            Self::LocalIP => |_| Self::LocalIP,
+            Self::TCPPort => |_| Self::TCPPort,
+            Self::Connect(connect) => connect.value_converter(),
+        }
+    }
+
+    fn item(&self, value: ValueEnum) -> MenuItem<&str, Self, ValueEnum, true> {
+        let title_text = self.as_str();
+        MenuItem::new(title_text, value).with_value_converter(self.value_converter())
+    }
+
+    fn get_connection() -> DiscoveryConnect {
+        DiscoveryConnect::Connect
+    }
+
+    fn get_connection_item(
+        connect: DiscoveryConnect,
+    ) -> MenuItem<&'static str, Self, ValueEnum, true> {
+        match connect {
+            DiscoveryConnect::Connect => {
+                Self::Connect(DiscoveryConnect::Connect).item(ValueEnum::empty())
+            }
+            DiscoveryConnect::Connecting => {
+                Self::Connect(DiscoveryConnect::Connecting).item(ValueEnum::empty())
+            }
+            DiscoveryConnect::Disconnect => {
+                Self::Connect(DiscoveryConnect::Disconnect).item(ValueEnum::empty())
+            }
+        }
+    }
 }
 
 impl DiscoverySubmenu {
@@ -154,7 +218,7 @@ impl DiscoverySubmenu {
             DiscoverySubmenu::RemoteIP => "ReIP",
             DiscoverySubmenu::LocalIP => "LoIP",
             DiscoverySubmenu::TCPPort => "Port",
-            DiscoverySubmenu::Connect => "Connect",
+            DiscoverySubmenu::Connect(connect) => connect.as_str(),
         }
     }
 
@@ -167,13 +231,13 @@ impl DiscoverySubmenu {
         let remote_addr: ValueEnum = info.remote_addr_string().into();
         let local_addr: ValueEnum = info.local_addr_string().into();
         let tcp_port: ValueEnum = info.announce_info().tcp_port().to_string().into();
-        let connect: ValueEnum = ValueEnum::empty();
+        let connect: DiscoveryConnect = Self::get_connection();
 
-        items.push(DiscoverySubmenu::Name.item(name));
-        items.push(DiscoverySubmenu::RemoteIP.item(remote_addr));
-        items.push(DiscoverySubmenu::LocalIP.item(local_addr));
-        items.push(DiscoverySubmenu::TCPPort.item(tcp_port));
-        items.push(DiscoverySubmenu::Connect.item(connect));
+        items.push(Self::Name.item(name));
+        items.push(Self::RemoteIP.item(remote_addr));
+        items.push(Self::LocalIP.item(local_addr));
+        items.push(Self::TCPPort.item(tcp_port));
+        items.push(Self::get_connection_item(connect));
 
         items
     }
@@ -182,7 +246,7 @@ impl DiscoverySubmenu {
 impl ActionableSelect for DiscoverySubmenu {
     fn is_actionable(&self) -> bool {
         match self {
-            DiscoverySubmenu::Connect => true,
+            DiscoverySubmenu::Connect(_) => true,
             _ => false,
         }
     }
@@ -217,19 +281,21 @@ pub enum WIFIConnect {
 }
 
 impl WIFIConnect {
-    pub fn as_str(&self) -> &str {
+    fn value_converter(&self) -> fn(ValueEnum) -> WIFISubmenu {
         match self {
-            WIFIConnect::Connect => "Connect",
-            WIFIConnect::Connecting => "Connecting",
-            WIFIConnect::Disconnect => "Disconnect",
+            Self::Connect => |_| WIFISubmenu::Connect(Self::Connect),
+            Self::Connecting => |_| WIFISubmenu::Connect(Self::Connecting),
+            Self::Disconnect => |_| WIFISubmenu::Connect(Self::Disconnect),
         }
     }
+}
 
-    pub fn value_converter(&self) -> fn(ValueEnum) -> WIFISubmenu {
+impl WIFIConnect {
+    pub fn as_str(&self) -> &str {
         match self {
-            WIFIConnect::Connect => |_| WIFISubmenu::Connect(WIFIConnect::Connect),
-            WIFIConnect::Connecting => |_| WIFISubmenu::Connect(WIFIConnect::Connecting),
-            WIFIConnect::Disconnect => |_| WIFISubmenu::Connect(WIFIConnect::Disconnect),
+            Self::Connect => "Connect",
+            Self::Connecting => "Connecting",
+            Self::Disconnect => "Disconnect",
         }
     }
 }
@@ -245,10 +311,10 @@ pub enum WIFISubmenu {
 impl WIFISubmenu {
     fn value_converter(&self) -> fn(ValueEnum) -> Self {
         match self {
-            WIFISubmenu::SSID => |_| WIFISubmenu::SSID,
-            WIFISubmenu::Status => |_| WIFISubmenu::Status,
-            WIFISubmenu::Address => |_| WIFISubmenu::Address,
-            WIFISubmenu::Connect(connect) => connect.value_converter(),
+            Self::SSID => |_| Self::SSID,
+            Self::Status => |_| Self::Status,
+            Self::Address => |_| Self::Address,
+            Self::Connect(connect) => connect.value_converter(),
         }
     }
 
@@ -302,14 +368,12 @@ impl WIFISubmenu {
 
     fn get_connection_item(connect: WIFIConnect) -> MenuItem<&'static str, Self, ValueEnum, true> {
         match connect {
-            WIFIConnect::Connect => {
-                WIFISubmenu::Connect(WIFIConnect::Connect).item(ValueEnum::empty())
-            }
+            WIFIConnect::Connect => Self::Connect(WIFIConnect::Connect).item(ValueEnum::empty()),
             WIFIConnect::Connecting => {
-                WIFISubmenu::Connect(WIFIConnect::Connecting).item(ValueEnum::empty())
+                Self::Connect(WIFIConnect::Connecting).item(ValueEnum::empty())
             }
             WIFIConnect::Disconnect => {
-                WIFISubmenu::Connect(WIFIConnect::Disconnect).item(ValueEnum::empty())
+                Self::Connect(WIFIConnect::Disconnect).item(ValueEnum::empty())
             }
         }
     }
@@ -318,10 +382,10 @@ impl WIFISubmenu {
 impl WIFISubmenu {
     pub fn as_str(&self) -> &str {
         match self {
-            WIFISubmenu::SSID => "SSID",
-            WIFISubmenu::Status => "Stat",
-            WIFISubmenu::Address => "Addr",
-            WIFISubmenu::Connect(connect) => connect.as_str(),
+            Self::SSID => "SSID",
+            Self::Status => "Stat",
+            Self::Address => "Addr",
+            Self::Connect(connect) => connect.as_str(),
         }
     }
 
@@ -335,9 +399,9 @@ impl WIFISubmenu {
 
         let mut items: _ = Vec::new();
 
-        items.push(WIFISubmenu::SSID.item(ssid));
-        items.push(WIFISubmenu::Status.item(status));
-        items.push(WIFISubmenu::Address.item(addr));
+        items.push(Self::SSID.item(ssid));
+        items.push(Self::Status.item(status));
+        items.push(Self::Address.item(addr));
         items.push(Self::get_connection_item(connect));
 
         items
@@ -347,7 +411,7 @@ impl WIFISubmenu {
 impl ActionableSelect for WIFISubmenu {
     fn is_actionable(&self) -> bool {
         match self {
-            WIFISubmenu::Connect(_) => true,
+            Self::Connect(_) => true,
             _ => false,
         }
     }

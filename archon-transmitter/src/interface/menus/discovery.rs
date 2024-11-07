@@ -136,7 +136,7 @@ pub async fn discovery_submenu(
                         let value = menu.interact(Interaction::Action(Action::Select));
                         if let Some(value) = value {
                             match value {
-                                DiscoverySubmenu::Connect => {
+                                DiscoverySubmenu::Connect(_) => {
                                     let result = discovery.connect(info).await;
                                     defmt::info!("Discovery Connection: {:?}", result);
                                 }
