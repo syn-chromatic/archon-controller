@@ -165,7 +165,7 @@ impl DiscoveryConnect {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
 pub enum DiscoverySubmenu {
     Name,
     RemoteIP,
@@ -175,21 +175,6 @@ pub enum DiscoverySubmenu {
 }
 
 impl DiscoverySubmenu {
-    fn value_converter(&self) -> fn(ValueEnum) -> Self {
-        match self {
-            Self::Name => |_| Self::Name,
-            Self::RemoteIP => |_| Self::RemoteIP,
-            Self::LocalIP => |_| Self::LocalIP,
-            Self::TCPPort => |_| Self::TCPPort,
-            Self::Connect(connect) => connect.value_converter(),
-        }
-    }
-
-    fn item(&self, value: ValueEnum) -> MenuItem<&str, Self, ValueEnum, true> {
-        let title_text = self.as_str();
-        MenuItem::new(title_text, value).with_value_converter(self.value_converter())
-    }
-
     fn get_connection() -> DiscoveryConnect {
         DiscoveryConnect::Connect
     }
@@ -300,7 +285,7 @@ impl WIFIConnect {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
 pub enum WIFISubmenu {
     SSID,
     Status,
@@ -309,20 +294,6 @@ pub enum WIFISubmenu {
 }
 
 impl WIFISubmenu {
-    fn value_converter(&self) -> fn(ValueEnum) -> Self {
-        match self {
-            Self::SSID => |_| Self::SSID,
-            Self::Status => |_| Self::Status,
-            Self::Address => |_| Self::Address,
-            Self::Connect(connect) => connect.value_converter(),
-        }
-    }
-
-    fn item(&self, value: ValueEnum) -> MenuItem<&str, Self, ValueEnum, true> {
-        let title_text = self.as_str();
-        MenuItem::new(title_text, value).with_value_converter(self.value_converter())
-    }
-
     fn get_ssid(state: &WIFIState) -> ValueEnum {
         if let Some(link) = &state.link {
             return ValueEnum::string(&link.ssid);

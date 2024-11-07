@@ -1,23 +1,38 @@
 // src/lib.rs
+
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DataEnum, DeriveInput};
+use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 #[proc_macro_derive(ValueConverter)]
 pub fn value_converter_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let enum_name = input.ident;
 
-    let variants = if let Data::Enum(DataEnum { variants, .. }) = &input.data {
-        variants
+    let variants = if let Data::Enum(data_enum) = &input.data {
+        data_enum.variants.iter()
     } else {
         panic!("ValueConverter can only be derived for enums");
     };
 
-    let match_arms = variants.iter().map(|variant| {
+    let match_arms = variants.map(|variant| {
         let variant_name = &variant.ident;
-        quote! {
-            #enum_name::#variant_name => |_| #enum_name::#variant_name,
+        match &variant.fields {
+            Fields::Unit => {
+                quote! {
+                    Self::#variant_name => |_| Self::#variant_name,
+                }
+            }
+            Fields::Unnamed(_) => {
+                quote! {
+                    Self::#variant_name(inner) => inner.value_converter(),
+                }
+            }
+            Fields::Named(_) => {
+                quote! {
+                    Self::#variant_name { inner } => inner.value_converter(),
+                }
+            }
         }
     });
 
