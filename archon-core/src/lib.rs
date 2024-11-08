@@ -16,3 +16,4 @@ pub mod input;
 pub mod ring;
 pub mod status;
 pub mod utils;
+pub mod socket;
