@@ -66,9 +66,9 @@ impl ArchonTransmitter {
         udp: &mut UdpSocket<'_>,
         endpoint: IpEndpoint,
         inputs: &Vec<InputType>,
-    ) -> Result<(), ()> {
-        embassy_futures::yield_now().await;
+    ) {
         for input in inputs {
+            embassy_futures::yield_now().await;
             match input {
                 InputType::DPad(input_dpad) => {
                     let buffer: _ = input_dpad.to_buffer();
@@ -78,7 +78,10 @@ impl ArchonTransmitter {
                     let buffer: _ = input_joystick.to_buffer();
                     let _ = udp.send_to(&buffer, endpoint).await;
                 }
-                InputType::ASCII(_input_ascii) => todo!(),
+                InputType::ASCII(input_ascii) => {
+                    let buffer: _ = input_ascii.to_buffer();
+                    let _ = udp.send_to(&buffer, endpoint).await;
+                }
                 InputType::Rotary(input_rotary) => {
                     let buffer: _ = input_rotary.to_buffer();
                     let _ = udp.send_to(&buffer, endpoint).await;
@@ -89,8 +92,6 @@ impl ArchonTransmitter {
                 }
             }
         }
-
-        Ok(())
     }
 }
 

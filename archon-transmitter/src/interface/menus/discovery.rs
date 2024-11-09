@@ -10,13 +10,16 @@ use super::super::utils::discovery_to_menu_items;
 use crate::device::BufferedDeviceLayout;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
+use crate::transmitter::ArchonTransmitter;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
 use embsys::crates::embedded_graphics;
+use embsys::exts::non_std;
 use embsys::exts::std;
 
+use non_std::error::net::SocketError;
 use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
@@ -31,9 +34,12 @@ use embedded_menu::MenuState;
 use archon_core::discovery::AnnounceInformation;
 use archon_core::discovery::DiscoveryInformation;
 use archon_core::discovery::DiscoveryStatus;
+use archon_core::discovery::EstablishInformation;
 use archon_core::discovery::MultiCastDiscovery;
+use archon_core::endpoint::ArchonEndpoint;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
+use archon_core::socket::UdpSocketWrapper;
 
 pub async fn discovery_menu(spawner: SendSpawner, display: &mut GraphicsDisplay<SPIMode<'_>>) {
     let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
@@ -133,8 +139,7 @@ pub async fn discovery_submenu(
                         if let Some(value) = value {
                             match value {
                                 DiscoverySubmenu::Connect(_) => {
-                                    let result = discovery.connect(info).await;
-                                    defmt::info!("Discovery Connection: {:?}", result);
+                                    discovery_connect(discovery, info).await;
                                 }
                                 _ => {}
                             }
@@ -152,5 +157,32 @@ pub async fn discovery_submenu(
         }
 
         state = menu.state();
+    }
+}
+
+async fn discovery_connect(discovery: &MultiCastDiscovery, info: &DiscoveryInformation) {
+    let result: Result<EstablishInformation, SocketError> = discovery.connect(info).await;
+    defmt::info!("Discovery Connection: {:?}", result);
+
+    discovery.stop_discovery().await;
+
+    if let Ok(result) = result {
+        let endpoint: ArchonEndpoint = result.archon_endpoint();
+        ArchonTransmitter::read_lock().set_endpoint(endpoint);
+
+        let mut udp_wrapper: UdpSocketWrapper<32> = UdpSocketWrapper::new();
+        let socket: _ = ArchonTransmitter::read_lock().setup_socket(&mut udp_wrapper);
+
+        if let Ok((mut udp, endpoint)) = socket {
+            defmt::info!("Transmitter Loop");
+            loop {
+                embassy_futures::yield_now().await;
+                let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
+                defmt::info!("Inputs: {:?}", inputs.len());
+                ArchonTransmitter::read_lock()
+                    .send(&mut udp, endpoint, &inputs)
+                    .await;
+            }
+        }
     }
 }

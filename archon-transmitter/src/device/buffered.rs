@@ -18,7 +18,7 @@ use embassy_sync::mutex::Mutex;
 use embassy_sync::waitqueue::WakerRegistration;
 
 const RWLOCK_SIZE: usize = 2;
-const INPUT_BUFFER: usize = 512;
+const INPUT_BUFFER: usize = 32;
 
 pub static BUFF_DEVICE: RwLockBufferedDevice = RwLock::new(BufferedDeviceLayout::new());
 
