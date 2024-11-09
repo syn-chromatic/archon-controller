@@ -8,6 +8,7 @@ use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
 use super::super::traits::ActionableSelect;
 
+use crate::device::BufferedDeviceLayout;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
 use crate::tasks::wifi_connect;
@@ -32,14 +33,13 @@ use embedded_menu::interaction::Navigation;
 use embedded_menu::Menu;
 use embedded_menu::MenuState;
 
-use archon_core::devices::layout::DeviceLayout;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
 pub async fn settings_menu(
     spawner: SendSpawner,
     display: &mut GraphicsDisplay<SPIMode<'_>>,
-    layout: &mut DeviceLayout,
+    // layout: &mut DeviceLayout,
 ) {
     let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
     let mut state: _ = MenuState::default();
@@ -47,7 +47,8 @@ pub async fn settings_menu(
     loop {
         embassy_futures::yield_now().await;
 
-        let inputs: Vec<InputType> = layout.get_inputs().await;
+        // let inputs: Vec<InputType> = layout.get_inputs().await;
+        let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
         let items: _ = SettingsMenu::to_menu_items();
 
         let mut menu: _ = Menu::with_style("Settings", *style)
@@ -69,7 +70,7 @@ pub async fn settings_menu(
                         if let Some(value) = menu.interact(Interaction::Action(Action::Select)) {
                             match value {
                                 SettingsMenu::WIFI => {
-                                    wifi_submenu(spawner, display, layout).await;
+                                    wifi_submenu(spawner, display).await;
                                 }
                             }
                         }
@@ -92,7 +93,7 @@ pub async fn settings_menu(
 pub async fn wifi_submenu(
     spawner: SendSpawner,
     display: &mut GraphicsDisplay<SPIMode<'_>>,
-    layout: &mut DeviceLayout,
+    // layout: &mut DeviceLayout,
 ) {
     let mut style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
     let mut state: _ = MenuState::default();
@@ -100,7 +101,8 @@ pub async fn wifi_submenu(
     loop {
         embassy_futures::yield_now().await;
 
-        let inputs: Vec<InputType> = layout.get_inputs().await;
+        // let inputs: Vec<InputType> = layout.get_inputs().await;
+        let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
         let items: _ = WIFISubmenu::to_menu_items();
 
         let mut menu: _ = Menu::with_style("Wi-Fi", *style)

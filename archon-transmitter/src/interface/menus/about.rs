@@ -5,6 +5,7 @@ use super::super::indicator::DynShape;
 use super::super::style::DynMenuStyle;
 use super::super::theme::StandardTheme;
 
+use crate::device::BufferedDeviceLayout;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
 
@@ -21,18 +22,17 @@ use embedded_menu::interaction::Navigation;
 use embedded_menu::Menu;
 use embedded_menu::MenuState;
 
-use archon_core::devices::layout::DeviceLayout;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-pub async fn about_menu(display: &mut GraphicsDisplay<SPIMode<'_>>, layout: &mut DeviceLayout) {
+pub async fn about_menu(display: &mut GraphicsDisplay<SPIMode<'_>>) {
     let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Hidden);
     let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
 
-        let inputs: Vec<InputType> = layout.get_inputs().await;
+        let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
         let items: _ = AboutMenu::to_menu_items().await;
 
         let mut menu: _ = Menu::with_style("About", *style)

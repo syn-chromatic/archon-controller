@@ -15,5 +15,6 @@ pub mod endpoint;
 pub mod input;
 pub mod ring;
 pub mod status;
+pub mod rwlock;
 pub mod utils;
 pub mod socket;

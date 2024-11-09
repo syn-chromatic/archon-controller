@@ -11,6 +11,7 @@ use embsys::crates::defmt;
 // [1-byte ID, 2-byte Type ID, X-byte Input Data]
 
 #[repr(u16)]
+#[derive(Clone)]
 pub enum InputType {
     /// 6-byte — [1-byte DIRECTION] — [1-byte STATE] — [4-byte PRESS DURATION]
     DPad(InputDPad) = 0,
@@ -62,6 +63,7 @@ impl InputType {
 }
 
 #[repr(u8)]
+#[derive(Clone)]
 pub enum DPad {
     Up = 0,
     Right = 1,
@@ -89,6 +91,7 @@ impl DPad {
     }
 }
 
+#[derive(Clone)]
 pub struct ButtonState {
     pressed: bool,
     duration: u16,
@@ -118,6 +121,7 @@ impl ButtonState {
     }
 }
 
+#[derive(Clone)]
 pub struct InputDPad {
     id: u8,
     dpad: DPad,
@@ -199,6 +203,7 @@ impl InputDPad {
     }
 }
 
+#[derive(Clone)]
 pub struct InputJoyStick {
     id: u8,
     x: u16,
@@ -266,6 +271,7 @@ impl InputJoyStick {
     }
 }
 
+#[derive(Clone)]
 pub struct InputASCII {
     id: u8,
     char: char,
@@ -317,6 +323,7 @@ impl InputASCII {
     }
 }
 
+#[derive(Clone)]
 pub struct InputRotary {
     id: u8,
     value: u16,
@@ -368,6 +375,7 @@ impl InputRotary {
     }
 }
 
+#[derive(Clone)]
 pub struct InputButton {
     id: u8,
     state: ButtonState,

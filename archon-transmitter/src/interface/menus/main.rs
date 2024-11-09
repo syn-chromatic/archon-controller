@@ -9,11 +9,11 @@ use super::diagnostics::diagnostics_menu;
 use super::discovery::discovery_menu;
 use super::settings::settings_menu;
 
-use crate::devices::DevicesBuilder;
-
 use crate::display::setup_display;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
+
+use crate::device::BufferedDeviceLayout;
 
 use embsys::crates::embassy_executor;
 use embsys::crates::embassy_futures;
@@ -31,29 +31,21 @@ use embedded_menu::interaction::Navigation;
 use embedded_menu::Menu;
 use embedded_menu::MenuState;
 
-use archon_core::devices::layout::DeviceLayout;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
 pub async fn start_interface(spawner: SendSpawner) {
-    let mut layout: DeviceLayout = DeviceLayout::new();
-    DevicesBuilder::build(&mut layout).await;
-
     let mut display: GraphicsDisplay<SPIMode<'_>> = setup_display();
-    main_menu(spawner, &mut display, &mut layout).await;
+    main_menu(spawner, &mut display).await;
 }
 
-pub async fn main_menu(
-    spawner: SendSpawner,
-    display: &mut GraphicsDisplay<SPIMode<'_>>,
-    layout: &mut DeviceLayout,
-) {
+pub async fn main_menu(spawner: SendSpawner, display: &mut GraphicsDisplay<SPIMode<'_>>) {
     let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
     let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
-        let inputs: Vec<InputType> = layout.get_inputs().await;
+        let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
 
         let items: _ = MainMenu::to_menu_items();
         let mut menu: _ = Menu::with_style("Main Menu", *style)
@@ -77,16 +69,16 @@ pub async fn main_menu(
                         if let Some(val) = val {
                             match val {
                                 MainMenu::Discovery => {
-                                    discovery_menu(spawner, display, layout).await;
+                                    discovery_menu(spawner, display).await;
                                 }
                                 MainMenu::Settings => {
-                                    settings_menu(spawner, display, layout).await;
+                                    settings_menu(spawner, display).await;
                                 }
                                 MainMenu::Diagnostics => {
-                                    diagnostics_menu(display, layout).await;
+                                    diagnostics_menu(display).await;
                                 }
                                 MainMenu::About => {
-                                    about_menu(display, layout).await;
+                                    about_menu(display).await;
                                 }
                             }
                         }

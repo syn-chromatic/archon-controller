@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use archon_core::devices::button::ButtonConfiguration;
 use archon_core::devices::button::ButtonDevice;
 use archon_core::devices::dpad::DPadConfiguration;
@@ -112,5 +114,11 @@ impl DevicesBuilder {
         layout.add_button(joystick_button_device);
         layout.add_rotary(rotary_device);
         layout.add_button(l1_button_device);
+    }
+
+    pub async fn build_layout() -> DeviceLayout {
+        let mut layout: DeviceLayout = DeviceLayout::new();
+        Self::build(&mut layout).await;
+        layout
     }
 }

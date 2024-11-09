@@ -1,6 +1,6 @@
 use crate::consts::WIFI_PASS;
 use crate::consts::WIFI_SSID;
-use crate::transmitter::ArchonTransmitter;
+use crate::device::BufferedDeviceLayout;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;
@@ -24,13 +24,8 @@ use embassy_net::Ipv4Cidr;
 use embassy_net::StaticConfigV4;
 
 #[embassy_executor::task]
-pub async fn archon_send(_s: TaskState) {
-    let _ = ArchonTransmitter::read_lock().send().await;
-}
-
-#[embassy_executor::task]
-pub async fn archon_collect(_s: TaskState) {
-    let _ = ArchonTransmitter::read_lock().collect().await;
+pub async fn buffered_device_collect(_s: TaskState) {
+    let _ = BufferedDeviceLayout::collect().await;
 }
 
 #[embassy_executor::task]

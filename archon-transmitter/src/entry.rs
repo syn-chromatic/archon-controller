@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-use crate::tasks::archon_collect;
-use crate::tasks::archon_send;
+use crate::tasks::buffered_device_collect;
 use crate::tasks::wifi_connect;
 use crate::tests;
 use crate::transmitter::ArchonTransmitter;
 
-use crate::devices::DevicesBuilder;
+use crate::device::BufferedDeviceLayout;
+use crate::device::DevicesBuilder;
 
 use crate::interface::start_interface;
 
@@ -32,6 +32,7 @@ use std::vec::Vec;
 
 use embassy_executor::SendSpawner;
 use embassy_executor::Spawner;
+use embassy_time::Timer;
 
 use helpers::task_handler::Task;
 
@@ -68,19 +69,14 @@ async fn entry(spawner: Spawner) {
     defmt::info!("Initializing WiFi Driver..");
     SysInit::wifi_controller(&spawner).await;
 
-    // tests::joystick_test().await;
-    // tests::rotary_test().await;
-    // tests::dpad_test();
-    // tests::button_test().await;
-    // tests::test_device_layout().await;
-    // tests::test_display_menu().await;
+    defmt::info!("Initializing Devices Layout..");
+    BufferedDeviceLayout::build_layout().await;
 
     let send_spawner: SendSpawner = spawner.make_send();
-    let wifi_task: Task = Task::new(send_spawner, wifi_connect);
 
-    defmt::info!("Initializing Startup Tasks..");
+    defmt::info!("Initializing Wi-Fi Task..");
+    let wifi_task: Task = Task::new(send_spawner, wifi_connect);
     let _ = wifi_task.start();
-    // wifi_task.wait().await;
 
     let config_v4 = WIFIController::as_mut().get_config_v4();
     if let Some(config_v4) = config_v4 {
@@ -88,27 +84,10 @@ async fn entry(spawner: Spawner) {
         defmt::info!("ADDRESS: {:?}", address);
     }
 
+    defmt::info!("initializing Buffered Device Task..");
+    let buffered_device_task: Task = Task::new(send_spawner, buffered_device_collect);
+    let _ = buffered_device_task.start();
+
+    defmt::info!("Starting Interface..");
     start_interface(send_spawner).await;
-
-    // let discovery: MultiCastDiscovery = MultiCastDiscovery::new();
-    // let _ = discovery.join().await;
-    // let status: &DiscoveryStatus = discovery.start_discovery(&send_spawner).await.unwrap();
-    // let establish: EstablishInformation = get_establish_information(&discovery, status).await;
-    // discovery.stop_discovery().await;
-
-    // let endpoint: ArchonEndpoint = establish.archon_endpoint();
-
-    // ArchonTransmitter::read_lock().set_endpoint(endpoint);
-
-    // let archon: _ = ArchonTransmitter::read_lock();
-    // let mut layout: _ = archon.device_layout().lock();
-    // DevicesBuilder::build(&mut layout).await;
-
-    // defmt::info!("Archon Collecting..");
-    // let archon_collect_task: Task = Task::new(send_spawner, archon_collect);
-    // let _ = archon_collect_task.start();
-
-    // defmt::info!("Archon Sending..");
-    // let archon_send_task: Task = Task::new(send_spawner, archon_send);
-    // let _ = archon_send_task.start();
 }

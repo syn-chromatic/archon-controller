@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::devices::DevicesBuilder;
+use crate::device::DevicesBuilder;
 use archon_core::devices::layout::DeviceLayout;
 
 pub async fn test_device_layout() {
