@@ -41,16 +41,16 @@ pub async fn start_interface(spawner: SendSpawner) {
 
 pub async fn main_menu(spawner: SendSpawner, display: &mut GraphicsDisplay<SPIMode<'_>>) {
     let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
-    let mut state: _ = MenuState::default();
+    let state: _ = MenuState::default();
+
+    let items: _ = MainMenu::to_menu_items();
+    let mut menu: _ = Menu::with_style("Main Menu", *style)
+        .add_menu_items(items)
+        .build_with_state(state);
 
     loop {
         embassy_futures::yield_now().await;
         let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
-
-        let items: _ = MainMenu::to_menu_items();
-        let mut menu: _ = Menu::with_style("Main Menu", *style)
-            .add_menu_items(items)
-            .build_with_state(state);
 
         menu.update(display.get());
         menu.draw(display.get()).unwrap();
@@ -91,6 +91,5 @@ pub async fn main_menu(spawner: SendSpawner, display: &mut GraphicsDisplay<SPIMo
                 _ => {}
             }
         }
-        state = menu.state();
     }
 }

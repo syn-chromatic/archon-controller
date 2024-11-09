@@ -1,4 +1,4 @@
-use super::structures::SubMenuSelect;
+use super::select::SubMenuSelect;
 
 use embsys::exts::std;
 

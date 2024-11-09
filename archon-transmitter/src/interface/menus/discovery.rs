@@ -7,9 +7,9 @@ use super::super::theme::StandardTheme;
 use super::super::traits::ActionableSelect;
 use super::super::utils::discovery_to_menu_items;
 
+use crate::device::BufferedDeviceLayout;
 use crate::display::GraphicsDisplay;
 use crate::display::SPIMode;
-use crate::device::BufferedDeviceLayout;
 
 use embsys::crates::defmt;
 use embsys::crates::embassy_executor;

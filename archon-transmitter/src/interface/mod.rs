@@ -1,10 +1,10 @@
 mod enums;
 mod indicator;
 mod menus;
-mod structures;
+mod select;
 mod style;
 mod theme;
-mod utils;
 mod traits;
+mod utils;
 
 pub use menus::start_interface;

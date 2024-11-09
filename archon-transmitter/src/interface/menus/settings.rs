@@ -36,18 +36,13 @@ use embedded_menu::MenuState;
 use archon_core::input::DPad;
 use archon_core::input::InputType;
 
-pub async fn settings_menu(
-    spawner: SendSpawner,
-    display: &mut GraphicsDisplay<SPIMode<'_>>,
-    // layout: &mut DeviceLayout,
-) {
+pub async fn settings_menu(spawner: SendSpawner, display: &mut GraphicsDisplay<SPIMode<'_>>) {
     let style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
     let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
 
-        // let inputs: Vec<InputType> = layout.get_inputs().await;
         let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
         let items: _ = SettingsMenu::to_menu_items();
 
@@ -90,18 +85,13 @@ pub async fn settings_menu(
     }
 }
 
-pub async fn wifi_submenu(
-    spawner: SendSpawner,
-    display: &mut GraphicsDisplay<SPIMode<'_>>,
-    // layout: &mut DeviceLayout,
-) {
+pub async fn wifi_submenu(spawner: SendSpawner, display: &mut GraphicsDisplay<SPIMode<'_>>) {
     let mut style: _ = DynMenuStyle::new(StandardTheme, DynShape::Triangle);
     let mut state: _ = MenuState::default();
 
     loop {
         embassy_futures::yield_now().await;
 
-        // let inputs: Vec<InputType> = layout.get_inputs().await;
         let inputs: Vec<InputType> = BufferedDeviceLayout::take_inputs().await;
         let items: _ = WIFISubmenu::to_menu_items();
 

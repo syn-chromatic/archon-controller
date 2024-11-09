@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
-use super::structures::F32Value;
-use super::structures::U16Value;
+use super::select::ValueEnum;
 use super::traits::ActionableSelect;
 
 use embsys::drivers::hardware;
@@ -26,87 +25,7 @@ use archon_core::utils::addr_bytes_to_string;
 use archon_macros::ToItem;
 use archon_macros::ValueConverter;
 
-use embedded_menu::items::menu_item::SelectValue;
 use embedded_menu::items::MenuItem;
-use embedded_menu::SelectValue as SelectValueMacro;
-
-#[derive(Copy, Clone, PartialEq, SelectValueMacro)]
-pub enum BooleanEnum {
-    ON,
-    OFF,
-}
-
-impl BooleanEnum {
-    pub fn new(state: bool) -> Self {
-        match state {
-            true => BooleanEnum::ON,
-            false => BooleanEnum::OFF,
-        }
-    }
-}
-
-#[derive(Clone, PartialEq)]
-pub enum ValueEnum {
-    F32(F32Value),
-    U16(U16Value),
-    Boolean(BooleanEnum),
-    String(String),
-    Str(&'static str),
-}
-
-impl ValueEnum {
-    pub fn u16(value: u16) -> Self {
-        ValueEnum::U16(U16Value::new(value))
-    }
-
-    pub fn f32(value: f32) -> Self {
-        ValueEnum::F32(F32Value::new(value))
-    }
-
-    pub fn boolean(value: bool) -> Self {
-        ValueEnum::Boolean(BooleanEnum::new(value))
-    }
-
-    pub fn string(value: &str) -> ValueEnum {
-        ValueEnum::String(value.to_string())
-    }
-
-    pub fn str(value: &'static str) -> ValueEnum {
-        ValueEnum::Str(value)
-    }
-
-    pub fn empty() -> ValueEnum {
-        ValueEnum::Str("")
-    }
-
-    pub fn arrow() -> ValueEnum {
-        ValueEnum::Str(">")
-    }
-}
-
-impl SelectValue for ValueEnum {
-    fn marker(&self) -> &str {
-        match self {
-            ValueEnum::F32(f32) => f32.marker(),
-            ValueEnum::U16(u16) => u16.marker(),
-            ValueEnum::Boolean(boolean) => boolean.marker(),
-            ValueEnum::String(string) => string,
-            ValueEnum::Str(str) => *str,
-        }
-    }
-}
-
-impl From<String> for ValueEnum {
-    fn from(value: String) -> Self {
-        ValueEnum::String(value)
-    }
-}
-
-impl From<&'static str> for ValueEnum {
-    fn from(value: &'static str) -> Self {
-        ValueEnum::Str(value)
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, ValueConverter, ToItem)]
 pub enum MainMenu {
@@ -471,13 +390,11 @@ impl AboutMenu {
         // Needed to disable LED to get accurate sys voltage
         // As LED is connected to CYW43 and the chip uses GP29
 
-        let mut sys_voltage: f32 = 0.0;
-
         if let Ok(voltage) = HWController::sys_voltage().await {
-            sys_voltage = voltage;
+            return ValueEnum::f32_op(Some(voltage));
         }
 
-        ValueEnum::f32(sys_voltage)
+        ValueEnum::f32_op(None)
     }
 }
 
